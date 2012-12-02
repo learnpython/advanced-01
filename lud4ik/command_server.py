@@ -8,7 +8,7 @@ class ServerFinishException(Exception):
     pass
 
 
-def shutdown_handler(signum, frame):    
+def shutdown_handler(signum, frame):
     raise ServerFinishException()
 
 # check signal
@@ -20,12 +20,12 @@ class CommandServer:
     MAX_CONN = 5
     clients = []
     threads = {}
-    single_reply_commands = ['ping', 'pingd']    
+    single_reply_commands = ['ping', 'pingd']
 
     def __init__(self, host, port):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.settimeout(1.0)
-        self.socket.bind((host, port))        
+        self.socket.bind((host, port))
 
     def run(self):
         while True:
@@ -47,7 +47,7 @@ class CommandServer:
                 except socket.timeout:
                     conn.close()
                     del self.threads[addr]
-                    raise SystemExit()                                    
+                    raise SystemExit()
                 msg += chunk
 
             msg = msg.split('\n')
@@ -58,23 +58,23 @@ class CommandServer:
             elif command_name in self.single_reply_commands:
                 args = [conn]
             else:
-                args = [addr]                        
+                args = [addr]
             if len(msg) > 1:
-                args.append(msg[1])             
-            command(*args)        
+                args.append(msg[1])
+            command(*args)
 
     def connect(self, addr):
-        reply = self.format_reply("{}\n{}".format('connected', addr))        
+        reply = self.format_reply("{}\n{}".format('connected', addr))
         for conn in self.clients:
             conn.sendall(reply)
 
     def ping(self, conn):
         reply = self.format_reply('pong')
-        conn.sendall(reply)        
+        conn.sendall(reply)
 
     def pingd(self, conn, data):
         reply = self.format_reply('{}\n{}'.format('pongd', data))
-        conn.sendall(reply) 
+        conn.sendall(reply)
 
     def quit(self, conn, addr):
         reply = self.format_reply("{}\n{} disconnected.".format('ackquit', addr))
@@ -89,7 +89,7 @@ class CommandServer:
         for conn in self.clients:
             conn.sendall(reply)
         # need appropriate params
-        os.kill()      
+        os.kill()
 
     def format_reply(self, text):
         return "{:4}{}".format(len(reply), reply)
