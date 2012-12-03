@@ -3,5 +3,4 @@ Not done yet.
 TODO:
 1) debug signal;
 2) get done client;
-3) test;
-4) setup.py.
+3) test.
