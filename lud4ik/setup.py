@@ -8,7 +8,7 @@ setup(name='socket start',
       author_email='lukashe@ukr.net',
       url='https://github.com/lud4ik/advanced-01.git',
       classifiers=[
-        'Programming Language :: Python :: 3.3',        
+        'Programming Language :: Python :: 3.3',
         ],
       packages=['work'],
       py_modules = ['command_client', 'command_server'],
