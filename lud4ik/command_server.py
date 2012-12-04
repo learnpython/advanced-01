@@ -5,6 +5,7 @@ import threading
 from operator import attrgetter
 from collections import namedtuple
 
+from work.cmdargs import get_cmd_args
 from work.exceptions import ServerFinishException
 from work.utils import format_reply, get_random_hash
 
@@ -109,8 +110,8 @@ class CommandServer:
         raise SystemExit()
 
 
-def run_server():
-    server = CommandServer('', 50007)
+def run_server(host, port):
+    server = CommandServer(host, port)
     try:
         server.run()
     except ServerFinishException:
@@ -118,4 +119,5 @@ def run_server():
 
 
 if __name__ == '__main__':
-    run_server()
+    args = get_cmd_args()
+    run_server(args.host, args.port)

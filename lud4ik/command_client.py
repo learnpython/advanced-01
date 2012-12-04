@@ -4,6 +4,7 @@ import socket
 import threading
 
 from work.utils import format_reply
+from work.cmdargs import get_cmd_args
 from work.exceptions import ClientFinishException
 
 
@@ -76,8 +77,8 @@ class CommandClient:
         raise SystemExit()
 
 
-def run_client():
-    client = CommandClient('', 50007)
+def run_client(host, port):
+    client = CommandClient(host, port)
     try:
         client.run()
     except ClientFinishException:
@@ -85,4 +86,5 @@ def run_client():
 
 
 if __name__ == '__main__':
-    run_client()
+    args = get_cmd_args()
+    run_client(args.host, args.port)
