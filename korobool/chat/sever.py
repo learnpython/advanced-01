@@ -25,13 +25,20 @@ class ChatServer:
 
     def notify(self, sender, message):
         print('Notification received:', message)
-        for client in self.__clients_pool:
-            print(client.name)
+        if message[0] == b'CMD_STOP':
+            self.close_all_clients()
+            self.socket.close()
+
+        if message[0] == b'CMD_GONE':
+            print('Not implemented yet')
+
+        if message[0] == b'CMD_MSGE':
+            print('Not implemented yet')
 
     def close_all_clients(self):
         for client in self.__clients_pool:
             client.close()
-
+        self.__clients_pool.clear()
 
 chat_sever = ChatServer(PORT = 50007)
 chat_sever.serve()
