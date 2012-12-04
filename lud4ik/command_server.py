@@ -63,8 +63,7 @@ class CommandServer:
             command(*args)
 
     def connect(self, conn):
-        addr = self.clients[conn].addr
-        self.condition_reply(conn, addr, "{}\n{}", "connected")
+        self.condition_reply(conn, "{}\n{}", "connected")
 
     def ping(self, conn):
         reply = format_reply('pong')
