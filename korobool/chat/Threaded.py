@@ -14,12 +14,17 @@ class ServingThreadWrapper():
         self.thread = threading.Thread(target=ServingThreadWrapper.serve, args=(self,))
         self.closing = False
         self.thread.start()
+        #self.thread.join()
 
     # Thread-safe notifier to observer
     def notify(self, message):
         l = threading.RLock(ServingThreadWrapper.__global_sync)
         with l:
             self.observer.notify(self, message)
+
+    def close(self):
+        self.closing = True
+        self.thread.join()
 
     # This method is executed in separate thread.
     # Be aware of synchronization issues.
