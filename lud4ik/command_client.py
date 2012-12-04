@@ -1,41 +1,56 @@
+import os
+import signal
 import socket
 import threading
 
 from work.utils import format_reply
+from work.exceptions import ClientFinishException
+
+
+def shutdown_handler(signum, frame):
+    raise ClientFinishException()
+
+signal.signal(signal.SIGUSR1, shutdown_handler)
 
 
 class CommandClient:
 
+    session_id = None
+    TIMEOUT = 10.0
     reply_commands = ['connected', 'pong', 'pongd', 'ackquit', 'ackfinish']
-    print_reply_commands = ['connected', 'pong', 'pongd']
+    print_reply_commands = ['pong', 'pongd']
 
     def __init__(self, host, port):
         self.socket = socket.socket(socket.AF_INET,
                                     socket.SOCK_STREAM)
-        self.socket.settimeout(1.0)
+        self.socket.settimeout(self.TIMEOUT)
         self.socket.connect((host, port))
 
     def run(self):
         self.thread = threading.Thread(target=self.recv_response)
         self.thread.start()
         while True:
-            command = input()            
-            if command in ['q', 'quit']:
-                break
+            command = input()
             command_name = command.split()[0]
-            command = command.replace(' ', '\n')            
+            command = command.replace(' ', '\n')
             self.socket.sendall(format_reply(command))
-            if command_name == 'quit':
-                self.quit()                
-        self.socket.close()
 
     def recv_response(self):
         while True:
             msg = self.get_reply()
-            command_name = msg.split('\n')[0]
+            parts = msg.split('\n')
+            command_name = parts[0]
             if command_name in self.print_reply_commands:
                 print(msg)
-            elif command_name in ['ackquit', 'ackfinish']:
+            elif command_name == 'connected':
+                self.session_id = parts[-1]
+                print(msg)
+            elif command_name == 'ackquit':
+                if parts[-1] == self.session_id:
+                    self.close()
+                else:
+                    print(msg)
+            elif command_name == 'ackfinish':
                 self.close()
 
     def get_reply(self):
@@ -45,24 +60,30 @@ class CommandClient:
             try:
                 chunk = self.socket.recv(msg_len - len(msg))
             except socket.timeout:
-                # can be in thread or main; correctly disconnect
-                self.socket.close()               
-                raise SystemExit()                
+                self.close()
             msg += chunk
-
         msg = msg.decode('utf-8')
         return msg
 
-    def quit(self):
-        reply = self.get_reply()
-        if reply.find('ackquit')!= -1:
-            self.close()
-
     def close(self):
-        self.socket.close()             
+        os.kill(os.getpid(), signal.SIGUSR1)
+
+    def shutdown(self):
+        self.socket.close()
+        print('socket closed')
+        self.thread.join()
+        print('thread closed')
         raise SystemExit()
 
 
-if __name__ == '__main__':
+def run_client():
     client = CommandClient('', 50007)
-    client.run()
+    try:
+        client.run()
+    except ClientFinishException:
+        client.shutdown()
+
+
+if __name__ == '__main__':
+    run_client()
+

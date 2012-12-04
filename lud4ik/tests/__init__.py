@@ -10,4 +10,4 @@ class BaseTestCase(unittest.TestCase):
         pass
 
     def test_connect(self):
-        self.assertEqual(1, 2)
+        self.assertRaises(FileNotFoundError, open, '/doesnotexist.py')
