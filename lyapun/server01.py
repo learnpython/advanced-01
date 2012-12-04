@@ -1,23 +1,22 @@
 # coding=utf-8
 
-import socket
+import logging
 
+from work.cmdargs import parser
+from work.server import Server
 
-HOST = ''
-PORT = 50007
+args = parser.parse_args()
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.bind((HOST, PORT))
-sock.listen(1)
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(levelname)s] (%(threadName)s) %(message)s',
+)
 
-conn, addr = sock.accept()
+if not args.withlog:
+    logging.disable(logging.CRITICAL)
 
-print ('Connected by', addr)
+HOST = args.host
+PORT = args.port
 
-while True:
-    data = conn.recv(1024)
-    if not data:
-        break
-    conn.sendall(data)
-
-conn.close()
+server = Server(HOST, PORT)
+server.run()
