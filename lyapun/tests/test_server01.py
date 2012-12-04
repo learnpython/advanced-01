@@ -7,7 +7,7 @@ import logging
 from unittest import TestCase
 from time import sleep
 
-from work.utils import prepare_data_for_sending
+from work.utils import prepare_data_for_sending, parse_recieved_bytes
 from work.general import recieve_data_from_socket
 
 logging.disable(logging.CRITICAL)
@@ -48,7 +48,7 @@ class ServerTestCase(TestCase):
 
     def test_pingd(self):
         data = self._send_command('pingd hello world')
-        self.assertEqual(b'pongd hello world', data)
+        self.assertEqual(b'pongd\nhello\nworld', data)
 
     def test_quit(self):
         data = self._send_command('quit')
@@ -56,7 +56,10 @@ class ServerTestCase(TestCase):
 
     def test_quit_with_data(self):
         data = self._send_command('quit hello world')
-        self.assertEqual(b'ackquit hello world', data)
+        self.assertEqual(b'ackquit\nhello\nworld', data)
+        self.assertEqual(
+            ('ackquit', 'hello world'), parse_recieved_bytes(data)
+        )
 
     def test_finish(self):
         data = self._send_command('finish')

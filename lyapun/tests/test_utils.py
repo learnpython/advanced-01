@@ -12,7 +12,7 @@ class UtilsTestCase(unittest.TestCase):
             b'\x00\x05HELLO', prepare_data_for_sending("HELLO")
         )
         self.assertEqual(
-            b'\x00\x0eHELLO WORLD!!!',
+            b'\x00\x0eHELLO\nWORLD!!!',
             prepare_data_for_sending("HELLO WORLD!!!")
         )
 
@@ -23,5 +23,5 @@ class UtilsTestCase(unittest.TestCase):
         )
         self.assertEqual(
             ('pingd', 'HELLO'),
-            parse_recieved_bytes(b'pingd HELLO')
+            parse_recieved_bytes(b'pingd\nHELLO')
         )
