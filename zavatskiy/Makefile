@@ -3,7 +3,8 @@ ENV=~/.virtualenvs/advanced-01
 PYTHON=$(ENV)/bin/python
 PIP=$(ENV)/bin/pip
 
-default: virtualenv requirements run
+default:
+	virtualenv requirements run
 
 run:
 	@$(PYTHON) server01.py 
@@ -22,4 +23,3 @@ requirements:
 clean:
 	@echo "Cleaning *.pyc files"
 	@find . -name "*.pyc" -exec rm -f {} \;
-
