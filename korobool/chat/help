@@ -1,0 +1,18 @@
+#s.bind((HOST, PORT))
+#while True:
+#    s.listen(5)
+#    conn, addr = s.accept()
+#    # run thread
+#    process_connection(conn, addr)
+#
+## wait for finish
+#s.close()
+#
+## threaded code
+#def func(conn, addr):
+#    print('Connected by', addr)
+#    while True:
+#        data = conn.recv(1024)
+#        if not data: break
+#        conn.sendall(data)
+#    conn.close()
