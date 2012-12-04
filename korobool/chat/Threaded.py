@@ -5,27 +5,30 @@ from collections import deque
 
 class ServingThreadWrapper():
 
-    __global_sync = object()
+    __global_sync = object()        # Synchronization with main and all client threads
 
     def __init__(self, observer, conn, addr):
         self.name = 'no_name'
         self.observer = observer
-        self.commands_queue = deque()
-        self.__local_sync = object()
+        self.commands_queue = deque()       # each client has independent commands queue
+        self.__local_sync = object()        # synchronization between main and client thread
         self.conn = conn
         self.addr = addr
         self.thread = threading.Thread(target=ServingThreadWrapper.serve, args=(self,))
         self.closing = False
         self.thread.start()
 
+    # Thread safe first priority message
     def send(self, data):
         with threading.Lock(self.__local_sync):
             self.commands_queue.appendleft(data)
 
+    # Thread safe first idle message
     def post(self, data):
         with threading.Lock(self.__local_sync):
             self.commands_queue.append(data)
 
+    # Thread safe pop command operation
     def pop_command(self):
         with threading.Lock(self.__local_sync):
             if self.commands_queue.count() > 0:
