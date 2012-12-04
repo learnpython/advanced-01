@@ -25,14 +25,14 @@ class ChatServer:
 
     def notify(self, sender, message):
         print('Notification received:', message)
-        if message[0] == b'CMD_STOP':
+        if message[0] == 'CMD_STOP':
             self.close_all_clients()
             self.socket.close()
 
-        if message[0] == b'CMD_GONE':
+        if message[0] == 'CMD_GONE':
             print('Not implemented yet')
 
-        if message[0] == b'CMD_MSGE':
+        if message[0] == 'CMD_MSGE':
             print('Not implemented yet')
 
     def close_all_clients(self):
