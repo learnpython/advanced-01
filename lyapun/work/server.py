@@ -15,12 +15,12 @@ class Server():
 
     def __init__(self, host, port):
         logging.info('Initialized server with host %s, port %d', host, port)
+        signal.signal(signal.SIGINT, self.kill_signal_handler)
+        self.threads = []
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.settimeout(1.0)
         self.sock.bind((host, port))
-        self.threads = []
-        signal.signal(signal.SIGINT, self.kill_signal_handler)
 
     def run(self):
         while not self.do_stop:
@@ -48,8 +48,7 @@ class Server():
             logging.info(
                 "thread=%s, thread.is_alive=%s", thread, thread.is_alive()
             )
-            if thread.is_alive():
-                thread.join()
+            thread.join()
         self.sock.close()
         logging.info("Socket closed, socket=%s", self.sock)
 
@@ -58,10 +57,10 @@ class Server():
         while not self.do_stop:
             try:
                 recieved_bytes = recieve_data_from_socket(conn)
+                command, data = parse_recieved_bytes(recieved_bytes)
+                logging.info("Command=%s, data=%s", command, data)
             except socket.timeout:
                 continue
-            command, data = parse_recieved_bytes(recieved_bytes)
-            logging.info("Command=%s, data=%s", command, data)
             if command == 'connect':
                 conn.sendall(prepare_data_for_sending('connected'))
             elif command == 'ping':
