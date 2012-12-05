@@ -8,12 +8,10 @@ import logging
 from work.general import recieve_data_from_socket
 from work.utils import parse_recieved_bytes, prepare_data_for_sending
 
-do_stop = False
-
 
 class Server():
 
-    threads = []
+    do_stop = False
 
     def __init__(self, host, port):
         logging.info('Initialized server with host %s, port %d', host, port)
@@ -21,10 +19,11 @@ class Server():
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.settimeout(1.0)
         self.sock.bind((host, port))
+        self.threads = []
+        signal.signal(signal.SIGINT, self.kill_signal_handler)
 
     def run(self):
-        global do_stop
-        while not do_stop:
+        while not self.do_stop:
             self.sock.listen(5)
             try:
                 conn, addr = self.sock.accept()
@@ -38,14 +37,13 @@ class Server():
 
     def handle_client(self, conn, addr):
         thread = threading.Thread(
-            target=Server.socket_handler, args=[self, conn, addr]
+            target=self.socket_handler, args=[conn, addr]
         )
         thread.start()
         self.threads.append(thread)
 
     def stop(self):
-        global do_stop
-        do_stop = True
+        self.do_stop = True
         for thread in self.threads:
             logging.info(
                 "thread=%s, thread.is_alive=%s", thread, thread.is_alive()
@@ -55,11 +53,9 @@ class Server():
         self.sock.close()
         logging.info("Socket closed, socket=%s", self.sock)
 
-    @staticmethod
-    def socket_handler(server, conn, addr):
-        global do_stop
+    def socket_handler(self, conn, addr):
         conn.settimeout(1.0)
-        while not do_stop:
+        while not self.do_stop:
             try:
                 recieved_bytes = recieve_data_from_socket(conn)
             except socket.timeout:
@@ -82,19 +78,15 @@ class Server():
             elif command == 'finish':
                 conn.sendall(prepare_data_for_sending('ackfinish'))
                 conn.close()
-                do_stop = True
+                self.do_stop = True
                 break
         else:
             conn.sendall(prepare_data_for_sending('ackfinish'))
             conn.close()
 
-        server.threads.remove(threading.currentThread())
+        self.threads.remove(threading.currentThread())
         logging.info("Thread off conn=%s", conn)
 
-
-def kill_signal_handler(signum, frame):
-    global do_stop
-    do_stop = True
-    logging.info("Kill signal handler, do_stop=%s", do_stop)
-
-signal.signal(signal.SIGINT, kill_signal_handler)
+    def kill_signal_handler(self, signum, frame):
+        self.do_stop = True
+        logging.info("Kill signal handler, do_stop=%s", self.do_stop)
