@@ -13,8 +13,6 @@ from work.utils import format_reply, get_random_hash
 def shutdown_handler(signum, frame):
     raise ServerFinishException()
 
-signal.signal(signal.SIGUSR1, shutdown_handler)
-
 
 class CommandServer:
 
@@ -29,6 +27,17 @@ class CommandServer:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.settimeout(self.TIMEOUT)
         self.socket.bind((host, port))
+
+    @classmethod
+    def run_server(cls, host, port):
+        server = cls(host, port)
+        try:
+            server.run()
+            signal.signal(signal.SIGUSR1, shutdown_handler)
+        except ServerFinishException:
+            server.shutdown()
+        finally:
+            pass
 
     def run(self):
         while True:
@@ -49,13 +58,13 @@ class CommandServer:
                 except socket.timeout:
                     conn.close()
                     del self.clients[conn]
-                    raise SystemExit()
+                    return
                 msg += chunk
 
             msg = msg.decode('utf-8').split('\n')
             command_name = msg[0]
             command = getattr(self, command_name)
-            args = [conn]            
+            args = [conn]
             if len(msg) > 1:
                 args.append(msg[1])
             command(*args)
@@ -107,14 +116,6 @@ class CommandServer:
         raise SystemExit()
 
 
-def run_server(host, port):
-    server = CommandServer(host, port)
-    try:
-        server.run()
-    except ServerFinishException:
-        server.shutdown()
-
-
 if __name__ == '__main__':
     args = get_cmd_args()
-    run_server(args.host, args.port)
+    CommandServer.run_server(args.host, args.port)

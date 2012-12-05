@@ -11,8 +11,6 @@ from work.exceptions import ClientFinishException
 def shutdown_handler(signum, frame):
     raise ClientFinishException()
 
-signal.signal(signal.SIGUSR1, shutdown_handler)
-
 
 class CommandClient:
 
@@ -26,6 +24,17 @@ class CommandClient:
                                     socket.SOCK_STREAM)
         self.socket.settimeout(self.TIMEOUT)
         self.socket.connect((host, port))
+
+    @classmethod
+    def run_client(cls, host, port):
+        client = cls(host, port)
+        try:
+            client.run()
+            signal.signal(signal.SIGUSR1, shutdown_handler)
+        except ClientFinishException:
+            client.shutdown()
+        finally:
+            pass
 
     def run(self):
         self.thread = threading.Thread(target=self.recv_response)
@@ -78,14 +87,6 @@ class CommandClient:
         raise SystemExit()
 
 
-def run_client(host, port):
-    client = CommandClient(host, port)
-    try:
-        client.run()
-    except ClientFinishException:
-        client.shutdown()
-
-
 if __name__ == '__main__':
     args = get_cmd_args()
-    run_client(args.host, args.port)
+    CommandClient.run_client(args.host, args.port)
