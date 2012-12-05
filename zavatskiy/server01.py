@@ -16,8 +16,8 @@ class Server01:
     def new_stream(self, conn, addr):
         """ Make thread for each client connection """
         t = threading.Thread(target=self.handle_request, args=(conn, addr))
-        self.threads.append(t)
         t.start()
+        self.threads.append(t)
 
     def handle_request(self, conn, addr):
         """ Handler request """
@@ -41,8 +41,7 @@ class Server01:
         self.__shutdown = True
 
         for thread in self.threads:
-            if thread.is_alive():
-                thread.join()
+            thread.join()
         self.socket.close()
 
 if __name__ == '__main__':
