@@ -82,6 +82,8 @@ class Server():
                 conn.close()
                 self.do_stop = True
                 break
+            elif command:
+                self._send_data_to_socket(conn, 'invalid command')
         else:
             self._send_data_to_socket(conn, 'ackfinish')
             conn.close()
