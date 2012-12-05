@@ -19,4 +19,4 @@ HOST = args.host
 PORT = args.port
 
 server = Server(HOST, PORT)
-server.run()
+server.run_server()

@@ -15,34 +15,24 @@ class Server():
 
     def __init__(self, host, port):
         logging.info('Initialized server with host %s, port %d', host, port)
-        signal.signal(signal.SIGINT, self.kill_signal_handler)
+        signal.signal(signal.SIGINT, self._kill_signal_handler)
         self.threads = []
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.settimeout(1.0)
-        self.sock.bind((host, port))
+        self._initialize_socket(host, port)
 
-    def run(self):
+    def run_server(self):
         while not self.do_stop:
             self.sock.listen(5)
             try:
                 conn, addr = self.sock.accept()
                 logging.info("Accepted conn=%s, addr=%s", conn, addr)
-                self.handle_client(conn, addr)
+                self._handle_client(conn, addr)
             except InterruptedError:
                 pass
             except socket.timeout:
                 pass
-        self.stop()
+        self.stop_server()
 
-    def handle_client(self, conn, addr):
-        thread = threading.Thread(
-            target=self.socket_handler, args=(conn, addr)
-        )
-        thread.start()
-        self.threads.append(thread)
-
-    def stop(self):
+    def stop_server(self):
         self.do_stop = True
         for thread in self.threads:
             logging.info(
@@ -52,7 +42,20 @@ class Server():
         self.sock.close()
         logging.info("Socket closed, socket=%s", self.sock)
 
-    def socket_handler(self, conn, addr):
+    def _initialize_socket(self, host, port):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sock.settimeout(1.0)
+        self.sock.bind((host, port))
+
+    def _handle_client(self, conn, addr):
+        thread = threading.Thread(
+            target=self._socket_handler, args=(conn, addr)
+        )
+        thread.start()
+        self.threads.append(thread)
+
+    def _socket_handler(self, conn, addr):
         conn.settimeout(1.0)
         while not self.do_stop:
             try:
@@ -62,30 +65,33 @@ class Server():
             except socket.timeout:
                 continue
             if command == 'connect':
-                conn.sendall(prepare_data_for_sending('connected'))
+                self._send_data_to_socket(conn, 'connected')
             elif command == 'ping':
-                conn.sendall(prepare_data_for_sending('pong'))
+                self._send_data_to_socket(conn, 'pong')
             elif command == 'pingd':
-                conn.sendall(prepare_data_for_sending('pongd ' + data))
+                self._send_data_to_socket(conn, 'pongd ' + data)
             elif command == 'quit':
                 if data:
-                    conn.sendall(prepare_data_for_sending('ackquit ' + data))
+                    self._send_data_to_socket(conn, 'ackquit ' + data)
                 else:
-                    conn.sendall(prepare_data_for_sending('ackquit'))
+                    self._send_data_to_socket(conn, 'ackquit')
                 conn.close()
                 break
             elif command == 'finish':
-                conn.sendall(prepare_data_for_sending('ackfinish'))
+                self._send_data_to_socket(conn, 'ackfinish')
                 conn.close()
                 self.do_stop = True
                 break
         else:
-            conn.sendall(prepare_data_for_sending('ackfinish'))
+            self._send_data_to_socket(conn, 'ackfinish')
             conn.close()
 
         self.threads.remove(threading.currentThread())
         logging.info("Thread off conn=%s", conn)
 
-    def kill_signal_handler(self, signum, frame):
+    def _send_data_to_socket(self, conn, data):
+        conn.sendall(prepare_data_for_sending(data))
+
+    def _kill_signal_handler(self, signum, frame):
         self.do_stop = True
         logging.info("Kill signal handler, do_stop=%s", self.do_stop)
