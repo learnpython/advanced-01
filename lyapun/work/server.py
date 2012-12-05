@@ -37,7 +37,7 @@ class Server():
 
     def handle_client(self, conn, addr):
         thread = threading.Thread(
-            target=self.socket_handler, args=[conn, addr]
+            target=self.socket_handler, args=(conn, addr)
         )
         thread.start()
         self.threads.append(thread)
