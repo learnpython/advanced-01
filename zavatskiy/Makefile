@@ -6,8 +6,8 @@ PIP=$(ENV)/bin/pip
 install:
 	virtualenv requirements
 
-#run:
-	#@$(PYTHON) server01.py 
+run:
+	@$(PYTHON) server01.py 
 
 test:
 	@$(PYTHON) runtests.py

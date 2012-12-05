@@ -2,6 +2,8 @@ import socket
 import logging
 import threading
 
+from work.helpers import make_message
+
 
 class Server01:
 
@@ -22,9 +24,26 @@ class Server01:
     def handle_request(self, conn, addr):
         """ Handler request """
         while True:
-            data = conn.recv(1024)
-            if not data: break
-            conn.sendall(data)
+            buf_size = conn.recv(4).decode('utf-8').strip()
+            if not buf_size: break
+
+            buf = conn.recv(int(buf_size)).decode('utf-8')
+            command, data = buf.split('\n', 1)
+
+            if not buf: break
+
+            if command == 'connect':
+                conn.sendall(make_message('connected', 'HELLO'))
+            elif command == 'ping':
+                conn.sendall(make_message('pong'))
+            elif command == 'pingd':
+                conn.sendall(make_message('pongd', data))
+            elif command == 'quit':
+                conn.sendall(make_message('ackquit', data))
+            elif command == 'finish':
+                conn.sendall(make_message('ackfinish', data))
+                self.__shutdown = True
+
         conn.close()
 
     def serve(self):
@@ -43,6 +62,8 @@ class Server01:
         for thread in self.threads:
             thread.join()
         self.socket.close()
+
+
 
 if __name__ == '__main__':
 
