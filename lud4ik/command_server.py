@@ -61,7 +61,7 @@ class CommandServer:
             command(*args)
 
     def connect(self, conn):
-        self.condition_reply(conn, "{}\n{}", "connected")
+        self.condition_reply(conn, "connected", reply_templ="{}\nsession{}")
 
     def ping(self, conn):
         reply = format_reply('pong')
@@ -72,16 +72,16 @@ class CommandServer:
         conn.sendall(reply)
 
     def quit(self, conn):
-        self.condition_reply(conn, "{}\n{} disconnected.", "ackquit")
+        self.condition_reply(conn, "ackquit", shared_templ="{}\n{} disconnected.")
         conn.close()
         del self.clients[conn]
         raise SystemExit()
 
-    def condition_reply(self, conn, shared_templ, reply_command):
+    def condition_reply(self, conn, reply_command, shared_templ="{}\n{}", reply_templ="{}\n{}"):
         addr = self.clients[conn].addr
         shared_reply = format_reply(shared_templ.format(reply_command, addr))
         session_id = self.clients[conn].session
-        reply = format_reply("{}\n{}".format(reply_command, session_id))
+        reply = format_reply(reply_templ.format(reply_command, session_id))
         for client in self.clients.keys():
             if client == conn:
                 conn.sendall(reply)
