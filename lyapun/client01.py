@@ -2,13 +2,13 @@
 
 import socket
 
-from work.cmdargs import parser
+from work.cmdargs import parse_arguments
 from work.general import recieve_data_from_socket
 from work.utils import prepare_data_for_sending, parse_recieved_bytes
 
 
 if __name__ == "__main__":
-    args = parser.parse_args()
+    args = parse_arguments()
     HOST = args.host
     PORT = args.port
 
