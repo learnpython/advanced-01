@@ -1,6 +1,10 @@
+import sys
+
 __author__ = 'Oleksandr Korobov'
 
 import socket
+import signal
+
 from korobool.chat.Threaded import ServingThreadWrapper
 
 class ChatServer:
@@ -40,5 +44,18 @@ class ChatServer:
             client.close()
         self.__clients_pool.clear()
 
+    def stop_serve(self):
+        self.closing = True
+        print('Not implemented yet...')
+
+
 chat_sever = ChatServer(PORT = 50007)
+
+def signal_handler(signal, frame):
+    print('Wait... Server is closing now....')
+    chat_sever.stop_serve()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+
 chat_sever.serve()

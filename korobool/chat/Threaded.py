@@ -2,6 +2,7 @@ __author__ = 'Oleksandr Korobov'
 
 import threading
 from collections import deque
+import json
 
 class ServingThreadWrapper():
 
@@ -34,7 +35,7 @@ class ServingThreadWrapper():
             if self.commands_queue.count() > 0:
                 return self.commands_queue.pop()
 
-    # Thread-safe notifier to observer
+    # Thread-safe sever notifier
     def notify(self, message):
         with threading.RLock(ServingThreadWrapper.__global_sync):
             self.observer.notify(self, message)
@@ -52,34 +53,55 @@ class ServingThreadWrapper():
         print('Connection attempt', stw.addr)
         while not stw.closing:
 
-            ServingThreadWrapper.process_server_messages(stw)
-            # Implement communication protocol here
-            data = stw.conn.recv(128)
-            if not data: break
-            command = repr(data)
+            ServingThreadWrapper.__process_server_messages_queue(stw)
 
-            if command == b'CMD_STOP':
+            message = ServingThreadWrapper.__get_and_parse_client_message(stw)
+
+            command = json.loads(repr(message))
+
+            if command['cmd'] == b'CMD_STOP':
                 stw.notify(('CMD_STOP',))
                 break
 
-            if command == b'CMD_GONE':
+            if command['cmd'] == b'CMD_GONE':
                 #stw.notify(())
                 break
 
-            if command == b'CMD_MSGE':
+            if command['cmd'] == b'CMD_MSGE':
                 #stw.notify(())
                 break
 
-            if command == b'CMD_PING':
+            if command['cmd'] == b'CMD_PING':
                 stw.conn.sendall(b'MSG_PONG')
                 break
 
-            print('unsupported operation', command)
+            print('unsupported operation', command, 'closing client connection')
+            stw.closing = True
 
     @staticmethod
-    def process_server_messages(stw):
+    def __process_server_messages_queue(stw):
         command = stw.pop_command()
         if command is None:
             return
-        if command == 'MSG_SCL':
+
+        if command[0] == 'MSG_SCL':
             stw.conn.sendall(b'MSG_SCL')
+
+        if command[0] == 'MSG_MSG':
+            stw.conn.sendall(command[1])
+
+    @staticmethod
+    def __get_and_parse_client_message(stw):
+
+        header = stw.conn.recv(8)
+        if not header: return
+
+        # Validate header
+        def is_valid_header(header):
+            return True
+
+        if not is_valid_header(header):
+            stw.closing = True
+            return
+
+
