@@ -1,7 +1,9 @@
 import unittest
+from server01 import Server01
+from client01 import Client01
 
 
-class TestClient01Functions(unittest.TestCase):
+class TestClient01(unittest.TestCase):
 
     def setUp(self):
         pass
@@ -26,7 +28,3 @@ class TestClient01Functions(unittest.TestCase):
 
     def tearDown(self):
         pass
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -3,14 +3,14 @@ ENV=~/.virtualenvs/advanced-01
 PYTHON=$(ENV)/bin/python
 PIP=$(ENV)/bin/pip
 
-default:
-	virtualenv requirements run
+install:
+	virtualenv requirements
 
-run:
-	@$(PYTHON) server01.py 
+#run:
+	#@$(PYTHON) server01.py 
 
 test:
-	@$(PYTHON) tests/test_client01.py
+	@$(PYTHON) runtests.py
 
 virtualenv:
 	@echo "Creating virtual environment within $(ENV) directory"
