@@ -44,7 +44,8 @@ class CommandClient:
             if command_name in self.print_reply_commands:
                 print(msg)
             elif command_name == 'connected':
-                self.session_id = parts[-1]
+                if parts[-1].startswith('session'):
+                    self.session_id = parts[-1][7:]
                 print(msg)
             elif command_name == 'ackquit':
                 if parts[-1] == self.session_id:
