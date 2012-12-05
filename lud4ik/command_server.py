@@ -21,7 +21,7 @@ class CommandServer:
     MAX_CONN = 5
     TIMEOUT = 100.0
     clients = {}
-    commands = ['ping', 'pingd', 'quit', 'finish']
+    commands = ['connect', 'ping', 'pingd', 'quit', 'finish']
     single_reply_commands = ['ping', 'pingd']
     templ = namedtuple('templ', 'addr, thread, session')
 
@@ -55,10 +55,7 @@ class CommandServer:
             msg = msg.decode('utf-8').split('\n')
             command_name = msg[0]
             command = getattr(self, command_name)
-            if command_name in self.single_reply_commands + ['quit', 'connect']:
-                args = [conn]
-            else:
-                args = []
+            args = [conn]            
             if len(msg) > 1:
                 args.append(msg[1])
             command(*args)
@@ -91,11 +88,11 @@ class CommandServer:
             else:
                 conn.sendall(shared_reply)
 
-    def finish(self):
+    def finish(self, conn):
         addr = self.clients[conn].addr
         reply = format_reply("{}\n{} finished server.".format('ackfinish', addr))
-        for conn in self.clients.keys():
-            conn.sendall(reply)
+        for client in self.clients.keys():
+            client.sendall(reply)
         os.kill(os.getpid(), signal.SIGUSR1)
 
     def shutdown(self):
