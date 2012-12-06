@@ -37,13 +37,31 @@ class Base(unittest.TestCase):
 
 class Simple(Base):
 
-    def test_lol(self):
+    def test_single(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((HOST, PORT))
-        s.sendall(b'Hello, world')
+
+        s.sendall(b'connect')
         data = s.recv(1024)
         print('Received', repr(data))
-        s.sendall(b'quit')
+
+        s.sendall(b'ping')
+        data = s.recv(1024)
+        print('Received', repr(data))
+
+        s.sendall(b'pingd')
+        data = s.recv(1024)
+        print('Received', repr(data))
+
+        s.sendall(b'pingd\ndddd')
+        data = s.recv(1024)
+        print('Received', repr(data))
+
+#        s.sendall(b'quit')
+#        data = s.recv(1024)
+#        print('Received', repr(data))
+
+        s.sendall(b'finish')
         data = s.recv(1024)
         print('Received', repr(data))
 

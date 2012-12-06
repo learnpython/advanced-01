@@ -21,18 +21,35 @@ class Loop(Thread):
         self.conn = conn
         self.addr = addr
         self.srv = srv
+        self.running = True
         super().__init__()
 
     def run(self):
         print('Connected by', self.addr)
-        while self.srv.running:
+        while self.running:
+            if not self.srv.running:
+                self.running = False
+                self.conn.sendall(b'ackfinish')                
+                break
             packet = self.conn.recv(1024)
-            print('packet', packet)
             if not packet: break
             cmd, *data = packet.split(b'\n')
-            self.conn.sendall(packet)
-            if cmd == 'quit':
+            if cmd == b'connect':
+                self.conn.sendall(b'connected')
+            elif cmd == b'ping':
+                self.conn.sendall(b'pong')
+            elif cmd == b'pingd':
+                if not data:
+                    data = b'data not send'
+                else:
+                    data = b' '.join(data)
+                self.conn.sendall(b'pongd '+data)
+            elif cmd == b'quit':
+                self.conn.sendall(b'ackquit')
+                self.running = False
+            elif cmd == b'finish':
                 self.srv.running = False
+
         self.conn.close()
             
 
