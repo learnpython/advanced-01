@@ -26,6 +26,7 @@ class ChatServer:
     def serve(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((self.host, self.port))
+
         while not self.closing:
             self.socket.listen(5)
             conn, addr = self.socket.accept()
@@ -34,25 +35,23 @@ class ChatServer:
 
     def stop_serve(self):
         self.closing = True
-        print('Not implemented yet...')
+        print('Proper server closing  is not implemented yet...')
 
     def notify(self, sender, message):
         print('Notification received:', message)
-#        if message[0] == 'CMD_STOP':
-#            self.__close_all_clients()
-#            self.socket.close()
-#
-#        if message[0] == 'CMD_GONE':
-#            print('Not implemented yet')
-#
-#        if message[0] == 'CMD_MSGE':
-#            print('Not implemented yet')
+        if message['cmd'] == 'CMD_BROADCAST':
+            for client in self.__clients_pool:
+                if not client is None and not client.closing:
+                    #print('Posting to '. client.name)
+                    client.post(message)
+        if message['cmd'] == 'CMD_MESSAGE':
+            client.post({'cmd': 'CMD_SEVER_WARNING', 'msg': 'message sending is not implemented yet'})
 
 
 chat_sever = ChatServer(PORT = 50007)
 
 def signal_handler(signal, frame):
-    print('Wait... Server is closing now....')
+    print('CTRL+C caught. Wait... Server is closing now....')
     chat_sever.stop_serve()
     sys.exit(0)
 
