@@ -29,24 +29,19 @@ class Connection(threading.Thread):
 
     def terminate(self):
         self.stop.set()
-        self.conn.close()
-        self.join()
 
     def run(self):
-        self.send('Connected!\n')
         while not self.stop.wait(0):
             try:
-                self.send('=> ')
                 data = self.recv()
-                if len(data):
+                if data and len(data.strip()):
                     cmd, cmd_args = self.parse_data(data)
                     if cmd in self.cmd_list and callable(getattr(self, cmd)):
                         getattr(self, cmd)(cmd_args)
                     else:
-                        self.send('No such command\n')
+                        self.send('No such command')
             except socket.error as e:
                 logger.info("Socket error: %s, %s", e.errno, e.strerror)
-                self.conn.close()
                 break
             except IOError as e:
                 if e.errno == 32:
@@ -54,6 +49,7 @@ class Connection(threading.Thread):
                 else:
                     logger.info("IO error: %s, %s", e.errno, e.strerror)
                 break
+        self.conn.close()
 
     def send(self, data):
         logger.debug('sending:%s', repr(data))
@@ -62,12 +58,16 @@ class Connection(threading.Thread):
 
     def recv(self):
         rcv_data = self.conn.recv(self.CHUNK_SIZE)
+        if not rcv_data:
+            logger.info("Connection closed by foreign host.")
+            self.terminate()
+            return False
         data = rcv_data.decode('utf-8')
         logger.debug('received:%s', repr(data))
         return data
 
     def parse_data(self, data):
-        data_list = data.split(' ', 1)
+        data_list = data.split()
         return data_list[0], data_list[1:]
 
 
@@ -108,6 +108,7 @@ class Server:
         self.socket.close()
         for conn in self.connections:
             conn.terminate()
+            conn.join()
             del conn
 
 

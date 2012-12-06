@@ -5,6 +5,12 @@ PROJECT_DIR=./
 PYTHON=python
 TESTS_DIR=tests
 
+server:
+	@python server.py
+
+client:
+	@python client.py
+
 clean:
 	@echo Cleaning up...
 	@find $(PROJECT_DIR) -name '*~*' -exec rm {} \;
