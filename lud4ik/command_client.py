@@ -41,9 +41,12 @@ class CommandClient:
         self.thread.start()
         while True:
             command = input()
-            command_name = command.split()[0]
-            command = command.replace(' ', '\n')
-            self.socket.sendall(format_reply(command))
+            self.handle_input(command)
+
+    def handle_input(self, data):
+        command_name = data.split()[0]
+        command = data.replace(' ', '\n')
+        self.socket.sendall(format_reply(command))
 
     def recv_response(self):
         while True:
