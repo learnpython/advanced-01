@@ -2,10 +2,10 @@
 
 import logging
 
-from work.cmdargs import parser
+from work.cmdargs import parse_arguments
 from work.server import Server
 
-args = parser.parse_args()
+args = parse_arguments()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,4 +19,4 @@ HOST = args.host
 PORT = args.port
 
 server = Server(HOST, PORT)
-server.run()
+server.run_server()

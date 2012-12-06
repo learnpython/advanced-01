@@ -66,3 +66,7 @@ class ServerTestCase(TestCase):
         self.assertEqual(b'ackfinish', data)
         self.server.wait()
         self.assertEqual(0, self.server.poll())
+
+    def test_invalid_command(self):
+        data = self._send_command('invalid command')
+        self.assertEqual(b'invalid\ncommand', data)
