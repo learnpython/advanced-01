@@ -16,20 +16,27 @@ def get_options():
 class Server:
 
     def __init__(self, host, port):
-        self.host = host
-        self.port = port
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.bind((host, port))
         
     def run(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind((self.host, self.port))
-        s.listen(1)
-        conn, addr = s.accept()
+        while True:
+            self.socket.listen(1)
+            conn, addr = self.socket.accept()
+            cmd, *data = self.read(conn, addr)
+            if cmd == 'quit':
+                break
+
+    def read(self, conn, addr):
         print('Connected by', addr)
         while True:
-            data = conn.recv(1024)
-            if not data: break
-            conn.sendall(data)
+            packet = conn.recv(1024)
+            print('packet', packet)
+            if not packet: break
+            cmd, *data = packet.split(b'\n')
+            conn.sendall(packet)
         conn.close()
+        return cmd, data            
 
 
 if __name__ == '__main__':

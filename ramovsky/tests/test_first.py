@@ -1,6 +1,12 @@
+import time
 import unittest
 import subprocess
+import socket
 from sys import stdout, stderr
+
+HOST = 'localhost'
+PORT = 9999
+
 
 class Base(unittest.TestCase):
 
@@ -16,31 +22,32 @@ class Base(unittest.TestCase):
             ]
         self.proc = subprocess.Popen(commandline,
             stdout=stdout, stderr=stderr)
-        self.check_process()
+        self.addCleanup(self.shutdown)
+        time.sleep(.5)
 
     def check_process(self):
         if self.proc.poll() is not None:
             raise RuntimeError("Process dead")
 
-    def shutdown(self, proc):
-        while proc.poll() is None:
-            proc.terminate()
-            time.sleep(0.1)
+    def shutdown(self):
+        while self.proc.poll() is None:
+            self.proc.terminate()
+            time.sleep(.1)
 
 
 class Simple(Base):
 
     def test_lol(self):
-        import socket
-
-        HOST = 'localhost'
-        PORT = 9999
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((HOST, PORT))
         s.sendall(b'Hello, world')
         data = s.recv(1024)
-        s.close()
         print('Received', repr(data))
+        s.sendall(b'quit')
+        data = s.recv(1024)
+        print('Received', repr(data))
+
+        s.close()
 
     
 if __name__ == '__main__':
