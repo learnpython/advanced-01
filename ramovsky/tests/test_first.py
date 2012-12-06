@@ -25,14 +25,12 @@ class Base(unittest.TestCase):
         self.addCleanup(self.shutdown)
         time.sleep(.5)
 
-    def check_process(self):
-        if self.proc.poll() is not None:
-            raise RuntimeError("Process dead")
-
     def shutdown(self):
         while self.proc.poll() is None:
             self.proc.terminate()
             time.sleep(.1)
+        time.sleep(.5)            
+        print('Shutdown complete')
 
 
 class Simple(Base):
@@ -43,29 +41,49 @@ class Simple(Base):
 
         s.sendall(b'connect')
         data = s.recv(1024)
-        print('Received', repr(data))
+        self.assertEqual(b'connected', data)
 
         s.sendall(b'ping')
         data = s.recv(1024)
-        print('Received', repr(data))
+        self.assertEqual(b'pong', data)
 
         s.sendall(b'pingd')
         data = s.recv(1024)
-        print('Received', repr(data))
+        self.assertEqual(b'pongd data not send', data)
 
         s.sendall(b'pingd\ndddd')
         data = s.recv(1024)
-        print('Received', repr(data))
+        self.assertEqual(b'pongd dddd', data)
 
-#        s.sendall(b'quit')
-#        data = s.recv(1024)
-#        print('Received', repr(data))
-
-        s.sendall(b'finish')
+        s.sendall(b'quit')
         data = s.recv(1024)
-        print('Received', repr(data))
+        self.assertEqual(b'ackquit', data)
 
         s.close()
+
+    def test_two(self):
+        s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s1.connect((HOST, PORT))
+        s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s2.connect((HOST, PORT))
+
+        s1.sendall(b'connect')
+        data = s1.recv(1024)
+        self.assertEqual(b'connected', data)
+
+        s2.sendall(b'connect')
+        data = s2.recv(1024)
+        self.assertEqual(b'connected', data)
+
+        s1.sendall(b'finish')
+        data = s1.recv(1024)
+        self.assertEqual(b'ackfinish', data)
+
+        data = s2.recv(1024)
+        self.assertEqual(b'ackfinish', data)
+
+        s1.close()
+        s2.close()
 
     
 if __name__ == '__main__':
