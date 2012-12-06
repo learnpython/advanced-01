@@ -6,7 +6,7 @@ from contextlib import contextmanager
 
 def format_reply(reply):
     byte_reply = bytes(reply, 'utf-8')
-    return bytes("{:4}".format(len(byte_reply)), 'utf-8') + byte_reply
+    return len(byte_reply).to_bytes(4, 'little') + byte_reply
 
 
 def get_random_hash(n=10):
@@ -28,4 +28,11 @@ def get_conn_data(conn, length):
     while len(msg) < length:
         chunk = conn.recv(length - len(msg))
         msg += chunk
+    return msg
+
+
+def get_msg(conn):
+    MSG_LEN = 4
+    msg_len = int.from_bytes(get_conn_data(conn, MSG_LEN), 'little')
+    msg = get_conn_data(conn, msg_len)
     return msg

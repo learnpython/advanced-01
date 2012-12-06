@@ -10,7 +10,7 @@ from work.exceptions import ServerFinishException
 from work.utils import (format_reply,
                         get_random_hash,
                         handle_timeout,
-                        get_conn_data)
+                        get_msg)
 
 
 def shutdown_handler(signum, frame):
@@ -21,7 +21,6 @@ class CommandServer:
 
     MAX_CONN = 5
     TIMEOUT = 1.0
-    MSG_LEN = 4
     clients = {}
     commands = ['connect', 'ping', 'pingd', 'quit', 'finish']
     single_reply_commands = ['ping', 'pingd']
@@ -57,8 +56,7 @@ class CommandServer:
     def run_client(self, conn):
         while True:
             try:
-                msg_len = int(get_conn_data(conn, self.MSG_LEN))
-                msg = get_conn_data(conn, msg_len)
+                msg = get_msg(conn)
             except ValueError:
                 continue
             except socket.timeout:

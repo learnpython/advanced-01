@@ -3,7 +3,7 @@ import signal
 import socket
 import threading
 
-from work.utils import format_reply, get_conn_data
+from work.utils import format_reply, get_msg
 from work.cmdargs import get_cmd_args
 from work.exceptions import ClientFinishException
 
@@ -16,7 +16,6 @@ class CommandClient:
 
     session_id = None
     TIMEOUT = 1.0
-    MSG_LEN = 4
     reply_commands = ['connected', 'pong', 'pongd', 'ackquit', 'ackfinish']
     print_reply_commands = ['pong', 'pongd']
 
@@ -69,8 +68,7 @@ class CommandClient:
 
     def get_reply(self):
         try:
-            msg_len = int(get_conn_data(self.socket, self.MSG_LEN))
-            msg = get_conn_data(self.socket, msg_len)
+            msg = get_msg(self.socket)
         except ValueError:
             return
         except socket.timeout:
