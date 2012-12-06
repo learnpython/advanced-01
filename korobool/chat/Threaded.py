@@ -3,6 +3,7 @@ __author__ = 'Oleksandr Korobov'
 import threading
 from collections import deque
 import json
+import struct
 
 class ServingThreadWrapper():
 
@@ -15,7 +16,7 @@ class ServingThreadWrapper():
         self.__local_sync = threading.Lock()       # synchronization between main and client thread
         self.conn = conn
         self.addr = addr
-        self.thread = threading.Thread(target=ServingThreadWrapper.serve, args=(self,))
+        self.thread = threading.Thread(target=ServingThreadWrapper.__serve, args=(self,))
         self.closing = False
         self.thread.start()
 
@@ -41,7 +42,8 @@ class ServingThreadWrapper():
             self.observer.notify(self, message)
 
     def close(self):
-        self.send('MSG_SCL')
+        # Send closing message to client and then close the connection
+        print('Closing notification to client is not implemented yet...')
         self.closing = True
         self.thread.join()
 
@@ -49,58 +51,54 @@ class ServingThreadWrapper():
     # All updates globally accessible variables or calls to thread-unsafe methods/functions
     # must be done in synchronization block.
     @staticmethod
-    def serve(stw):
+    def __serve(stw):
         print('Connection attempt', stw.addr)
         while not stw.closing:
-
-            ServingThreadWrapper.__process_server_messages_queue(stw)
-
-            message = ServingThreadWrapper.__get_and_parse_client_message(stw)
-
-#            command = json.loads(repr(message))
-#
-#            if command['cmd'] == b'CMD_STOP':
-#                stw.notify(('CMD_STOP',))
-#                break
-#
-#            if command['cmd'] == b'CMD_GONE':
-#                #stw.notify(())
-#                break
-#
-#            if command['cmd'] == b'CMD_MSGE':
-#                #stw.notify(())
-#                break
-#
-#            if command['cmd'] == b'CMD_PING':
-#                stw.conn.sendall(b'MSG_PONG')
-#                break
-#
-#            print('unsupported operation', command, 'closing client connection')
-#            stw.closing = True
+            ServingThreadWrapper.__process_server_messages_queue(stw) # It might be good idea to move this to new thread
+            command = ServingThreadWrapper.__receive_and_parse_client_command(stw)
+            ServingThreadWrapper.__process_command(stw, command)
 
     @staticmethod
     def __process_server_messages_queue(stw):
-        command = stw.pop_command()
-        if command is None:
+        package = stw.pop_command()
+        if package is None:
             return
 
-        if command[0] == 'MSG_SCL':
-            stw.conn.sendall(b'MSG_SCL')
+        data = json.dumps(package)
 
-        if command[0] == 'MSG_MSG':
-            stw.conn.sendall(command[1])
+        b = bytes(data, 'utf-8')
+        stw.conn.sendall(struct.pack('i', len(data)))
+
+        stw.conn.sendall(b)
+        print('sent data...' , b.decode('utf-8'))
 
     @staticmethod
-    def __get_and_parse_client_message(stw):
+    def __receive_and_parse_client_command(stw):
 
-        header = stw.conn.recv(8)
+        header = stw.conn.recv(4)
         if not header: return
 
-        # Validate header
-        def is_valid_header(header):
-            return True
+        size = int(struct.unpack('i', header)[0])
+        print('receiving bytes:', size)
 
-        if not is_valid_header(header):
+        body = stw.conn.recv(size).decode('utf-8')
+
+        if not body:
+            print('Protocol error. Closing client connection.')
             stw.closing = True
-            return
 
+        print('!DATA!\n', body)
+
+        command = json.loads(body)
+
+        if not command:
+            print('Protocol error. Closing client connection.')
+            stw.closing = True
+
+        return command
+
+    @staticmethod
+    def __process_command(stw, command):
+        print('new command from client received', command['cmd'])
+        if command['cmd'] == 'CMD_PING':
+            stw.send({'cmd': 'CMD_PONG', 'msg': 'pong from server'})
