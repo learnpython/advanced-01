@@ -48,8 +48,8 @@ class ServingThreadWrapper():
 
     def close(self):
         # Send closing message to client and then close the connection
-        print('Closing notification to client is not implemented yet...')
         self.closing = True
+        self.send({'cmd': 'CMD_CLOSE'})
         self.thread.join()
 
     # These methods ere executed in separate thread. Be aware of synchronization issues.
@@ -63,6 +63,11 @@ class ServingThreadWrapper():
             ServingThreadWrapper.__process_server_messages_queue(stw) # It might be good idea to move this to new thread
             command = ServingThreadWrapper.__receive_and_parse_client_command(stw)
             ServingThreadWrapper.__process_command(stw, command)
+
+        print('trying to close client connection...')
+        ServingThreadWrapper.__process_server_messages_queue(stw)
+        stw.conn.close()
+        stw.notify({'cmd': 'CMD_CLIENT_LEFT', 'id': stw})
 
     @staticmethod
     def __process_server_messages_queue(stw):
@@ -97,13 +102,13 @@ class ServingThreadWrapper():
             print('Protocol error. Closing client connection.')
             stw.closing = True
 
-        print('!DATA!\n', body)
+        # print('!DATA!\n', body)
 
         command = json.loads(body)
 
         if not command:
             print('Protocol error. Closing client connection.')
-            stw.closing = True
+            stw.close()
 
         return command
 
@@ -113,10 +118,6 @@ class ServingThreadWrapper():
         print('new command from client received', command['cmd'])
         if command['cmd'] == 'CMD_PING':
             stw.send({'cmd': 'CMD_PONG', 'msg': 'pong from server'})
-
-        if command['cmd'] == 'CMD_BROADCAST':
-            stw.notify(command)
-
-        if command['cmd'] == 'CMD_MESSAGE':
+        else:
             stw.notify(command)
 

@@ -1,4 +1,5 @@
 import sys
+import time
 
 __author__ = 'Oleksandr Korobov'
 
@@ -19,34 +20,50 @@ class ChatServer:
         self.__clients_pool.append(stw)
 
     def __close_all_clients(self):
-        for client in self.__clients_pool:
-            client.close()
-        self.__clients_pool.clear()
+        print('closing ', len(self.__clients_pool), 'clients')
+        
+        while len(self.__clients_pool) > 0:
+            self.__clients_pool[0].close()
+        #self.socket.shutdown(socket.SHUT_RDWR)
+        self.socket.close()
 
     def serve(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((self.host, self.port))
 
+        self.socket.settimeout(2)
         while not self.closing:
+
             self.socket.listen(5)
-            conn, addr = self.socket.accept()
-            self.__start_serve_connection(conn, addr)
+            try:
+                conn, addr = self.socket.accept()
+                self.__start_serve_connection(conn, addr)
+            except:
+                pass # Remove this awful exception swallowing
         self.__close_all_clients()
 
     def stop_serve(self):
         self.closing = True
-        print('Proper server closing  is not implemented yet...')
+        self.__close_all_clients()
 
     def notify(self, sender, message):
         print('Notification received:', message)
+
         if message['cmd'] == 'CMD_BROADCAST':
             for client in self.__clients_pool:
                 if not client is None and not client.closing:
                     #print('Posting to '. client.name)
                     client.post(message)
+
         if message['cmd'] == 'CMD_MESSAGE':
             client.post({'cmd': 'CMD_SEVER_WARNING', 'msg': 'message sending is not implemented yet'})
 
+        if message['cmd'] == 'CMD_CLIENT_LEFT':
+            print('Client left', message['id'])
+            self.__clients_pool.remove(message['id'])
+
+        if message['cmd'] == 'CMD_SCLOSESERVER':
+            self.closing = True
 
 chat_sever = ChatServer(PORT = 50007)
 

@@ -1,4 +1,7 @@
+from contextlib import closing
+import os
 import threading
+import sys
 
 __author__ = 'Oleksandr Korobov'
 
@@ -12,10 +15,21 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((HOST, PORT))
 
 
+def close_client():
+    pid = os.getpid()
+    os.kill(pid, 9)
+
+
 def receive_and_parse_command():
+
     while True:
-        header = s.recv(4)
-        if not header: return
+        try:
+            header = s.recv(4)
+            if not header: break
+        except:
+            print('connection error. exiting...')
+            close_client()
+
 
         size = int(struct.unpack('i', header)[0])
         print('receiving bytes:', size)
@@ -24,6 +38,10 @@ def receive_and_parse_command():
         command = json.loads(body)
 
         print('data from server', command)
+
+        if command['cmd'] == 'CMD_CLOSE':
+            close_client()
+
 
 read_thread = threading.Thread(target=receive_and_parse_command)
 read_thread.start()
@@ -47,6 +65,9 @@ while True:
         user_id = input("Enter user id: ")
         message = input("Enter message: ")
         package = {'cmd': 'CMD_MESSAGE', 'msg': message}
+
+    if command_text.upper() == 'SCLOSESERVER':
+        package = {'cmd': 'CMD_SCLOSESERVER'}
 
     data = json.dumps(package)
 
