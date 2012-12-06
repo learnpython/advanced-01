@@ -56,18 +56,22 @@ class Loop(Thread):
 class Server:
 
     def __init__(self, host, port):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind((host, port))
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind((host, port))
+        s.settimeout(1.0)
+        self.socket = s
         self.running = True
         self.clients = []
         
     def run(self):
-        while True:
+        while self.running:
             self.socket.listen(1)
             conn, addr = self.socket.accept()
             cli = Loop(self, conn, addr)
             cli.start()
             self.clients.append(cli)
+        print('closing socket')
+        self.socket.close()
 
     def kill(self, signum, frame):
         print('Signal handler called with signal', signum)

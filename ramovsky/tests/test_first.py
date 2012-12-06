@@ -23,14 +23,13 @@ class Base(unittest.TestCase):
         self.proc = subprocess.Popen(commandline,
             stdout=stdout, stderr=stderr)
         self.addCleanup(self.shutdown)
-        time.sleep(.5)
+        time.sleep(.2)
 
     def shutdown(self):
         while self.proc.poll() is None:
             self.proc.terminate()
             time.sleep(.1)
-        time.sleep(.5)            
-        print('Shutdown complete')
+        time.sleep(1)
 
 
 class Simple(Base):
@@ -58,7 +57,14 @@ class Simple(Base):
         s.sendall(b'quit')
         data = s.recv(1024)
         self.assertEqual(b'ackquit', data)
+        
+        s.close()
 
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((HOST, PORT))
+        s.sendall(b'finish')
+        data = s.recv(1024)
+        self.assertEqual(b'ackfinish', data)
         s.close()
 
     def test_two(self):
