@@ -3,7 +3,7 @@ import signal
 import socket
 import threading
 
-from work.utils import format_reply
+from work.utils import format_reply, get_conn_data
 from work.cmdargs import get_cmd_args
 from work.exceptions import ClientFinishException
 
@@ -15,7 +15,8 @@ def shutdown_handler(signum, frame):
 class CommandClient:
 
     session_id = None
-    TIMEOUT = 10.0
+    TIMEOUT = 1.0
+    MSG_LEN = 4
     reply_commands = ['connected', 'pong', 'pongd', 'ackquit', 'ackfinish']
     print_reply_commands = ['pong', 'pongd']
 
@@ -29,12 +30,12 @@ class CommandClient:
     def run_client(cls, host, port):
         client = cls(host, port)
         try:
+            handler = signal.signal(signal.SIGUSR1, shutdown_handler)
             client.run()
-            signal.signal(signal.SIGUSR1, shutdown_handler)
         except ClientFinishException:
             client.shutdown()
         finally:
-            pass
+            signal.signal(signal.SIGUSR1, handler)
 
     def run(self):
         self.thread = threading.Thread(target=self.recv_response)
@@ -48,6 +49,8 @@ class CommandClient:
     def recv_response(self):
         while True:
             msg = self.get_reply()
+            if msg is None:
+                continue
             parts = msg.split('\n')
             command_name = parts[0]
             if command_name in self.print_reply_commands:
@@ -65,19 +68,19 @@ class CommandClient:
                 self.close()
 
     def get_reply(self):
-        msg = bytes()
-        msg_len = int(self.socket.recv(4))
-        while len(msg) < msg_len:
-            try:
-                chunk = self.socket.recv(msg_len - len(msg))
-            except socket.timeout:
-                self.close()
-            msg += chunk
+        try:
+            msg_len = int(get_conn_data(self.socket, self.MSG_LEN))
+            msg = get_conn_data(self.socket, msg_len)
+        except ValueError:
+            return
+        except socket.timeout:
+            return
         msg = msg.decode('utf-8')
         return msg
 
     def close(self):
         os.kill(os.getpid(), signal.SIGUSR1)
+        raise SystemExit()
 
     def shutdown(self):
         self.socket.close()

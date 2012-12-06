@@ -7,7 +7,10 @@ from collections import namedtuple
 
 from work.cmdargs import get_cmd_args
 from work.exceptions import ServerFinishException
-from work.utils import format_reply, get_random_hash
+from work.utils import (format_reply,
+                        get_random_hash,
+                        handle_timeout,
+                        get_conn_data)
 
 
 def shutdown_handler(signum, frame):
@@ -17,7 +20,8 @@ def shutdown_handler(signum, frame):
 class CommandServer:
 
     MAX_CONN = 5
-    TIMEOUT = 100.0
+    TIMEOUT = 1.0
+    MSG_LEN = 4
     clients = {}
     commands = ['connect', 'ping', 'pingd', 'quit', 'finish']
     single_reply_commands = ['ping', 'pingd']
@@ -32,34 +36,35 @@ class CommandServer:
     def run_server(cls, host, port):
         server = cls(host, port)
         try:
+            handler = signal.signal(signal.SIGUSR1, shutdown_handler)
             server.run()
-            signal.signal(signal.SIGUSR1, shutdown_handler)
-        except ServerFinishException:
+        except (ServerFinishException, OSError):
             server.shutdown()
         finally:
-            pass
+            signal.signal(signal.SIGUSR1, handler)
 
     def run(self):
+        self.socket.listen(self.MAX_CONN)
         while True:
-            self.socket.listen(self.MAX_CONN)
-            conn, addr = self.socket.accept()
-            th = threading.Thread(target=self.run_client, args=(conn, ))
-            self.clients[conn] = self.templ(addr=addr, thread=th,
-                                            session=get_random_hash())
-            th.start()
+            with handle_timeout():
+                conn, addr = self.socket.accept()
+                th = threading.Thread(target=self.run_client, args=(conn, ))
+                self.clients[conn] = self.templ(addr=addr,
+                                                thread=th,
+                                                session=get_random_hash())
+                th.start()
 
     def run_client(self, conn):
         while True:
-            msg = bytes()
-            msg_len = int(conn.recv(4))
-            while len(msg) < msg_len:
-                try:
-                    chunk = conn.recv(msg_len - len(msg))
-                except socket.timeout:
-                    conn.close()
-                    del self.clients[conn]
-                    return
-                msg += chunk
+            try:
+                msg_len = int(get_conn_data(conn, self.MSG_LEN))
+                msg = get_conn_data(conn, msg_len)
+            except ValueError:
+                continue
+            except socket.timeout:
+                conn.close()
+                self.clients.pop(conn, None)
+                return
 
             msg = msg.decode('utf-8').split('\n')
             command_name = msg[0]
@@ -81,17 +86,19 @@ class CommandServer:
         conn.sendall(reply)
 
     def quit(self, conn):
-        self.condition_reply(conn, "ackquit", shared_templ="{}\n{} disconnected.")
+        self.condition_reply(conn, "ackquit",
+                             shared_templ="{}\n{} disconnected.")
         conn.close()
-        del self.clients[conn]
+        self.clients.pop(conn, None)
         raise SystemExit()
 
-    def condition_reply(self, conn, reply_command, shared_templ="{}\n{}", reply_templ="{}\n{}"):
+    def condition_reply(self, conn, reply_command, shared_templ="{}\n{}",
+                        reply_templ="{}\n{}"):
         addr = self.clients[conn].addr
         shared_reply = format_reply(shared_templ.format(reply_command, addr))
         session_id = self.clients[conn].session
         reply = format_reply(reply_templ.format(reply_command, session_id))
-        for client in self.clients.keys():
+        for client in list(self.clients.keys()):
             if client == conn:
                 conn.sendall(reply)
             else:
@@ -99,10 +106,12 @@ class CommandServer:
 
     def finish(self, conn):
         addr = self.clients[conn].addr
-        reply = format_reply("{}\n{} finished server.".format('ackfinish', addr))
-        for client in self.clients.keys():
+        reply = format_reply("{}\n{} finished server.".format('ackfinish',
+                                                              addr))
+        for client in list(self.clients.keys()):
             client.sendall(reply)
         os.kill(os.getpid(), signal.SIGUSR1)
+        raise SystemExit()
 
     def shutdown(self):
         self.socket.close()
