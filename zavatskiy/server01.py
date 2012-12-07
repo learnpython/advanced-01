@@ -53,14 +53,19 @@ class Server01:
     def serve(self):
         """ Run server """
         while not self.__shutdown:
-            conn, addr = self.socket.accept()
-            self.new_stream(conn, addr)
+            try:
+                conn, addr = self.socket.accept()
+                self.new_stream(conn, addr)
+            except KeyboardInterrupt:
+                self.__shutdown = True
+
         self.shutdown()
 
     def shutdown(self):
         """ Shutdown server """
         for thread in self.threads:
             thread.join()
+
         self.socket.close()
 
 

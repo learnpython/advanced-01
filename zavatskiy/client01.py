@@ -1,3 +1,4 @@
+import time
 import socket
 
 from work.helpers import make_message, parse_message
@@ -30,7 +31,10 @@ if __name__ == '__main__':
     while True:
         data = raw_input('pingd> ')
         client.send('pingd', data)
+
         ans = client.recive()
+        if not ans[0]:
+            client.close()
         if ans[0] in ['ackquit', 'ackfinish']:
             break
 
