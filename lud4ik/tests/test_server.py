@@ -3,7 +3,6 @@ import socket
 import signal
 import unittest
 import subprocess
-from sys import stdout, stderr
 
 from command_server import CommandServer
 from command_client import CommandClient
@@ -15,8 +14,7 @@ class ServerTestCase(unittest.TestCase):
     PORT = 50007
 
     def setUp(self):
-        self.server = subprocess.Popen(['python3.3', 'command_server.py'],
-                                       stdout=subprocess.PIPE)
+        self.server = subprocess.Popen(['python3.3', 'command_server.py'])
         self.addCleanup(self.stop_server)
         self.socket = socket.socket(socket.AF_INET,
                                     socket.SOCK_STREAM)
