@@ -15,7 +15,9 @@ class Server():
 
     def __init__(self, host, port):
         logging.info('Initialized server with host %s, port %d', host, port)
-        signal.signal(signal.SIGINT, self._kill_signal_handler)
+        self.orig_signal_handler = signal.signal(
+            signal.SIGINT, self._kill_signal_handler
+        )
         self.threads = []
         self._initialize_socket(host, port)
 
@@ -41,6 +43,7 @@ class Server():
             thread.join()
         self.sock.close()
         logging.info("Socket closed, socket=%s", self.sock)
+        signal.signal(signal.SIGINT, self.orig_signal_handler)
 
     def _initialize_socket(self, host, port):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
