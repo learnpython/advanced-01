@@ -1,4 +1,5 @@
 import unittest
+
 from server01 import Server01
 from client01 import Client01
 
@@ -7,6 +8,9 @@ class TestClient01(unittest.TestCase):
 
     def setUp(self):
         self.client = Client01()
+
+    def tearDown(self):
+        self.client.close()
 
     def test_connect(self):
         self.client.send('connect', 'HELLO')
@@ -27,6 +31,5 @@ class TestClient01(unittest.TestCase):
     def test_finish(self):
         self.client.send('finish')
         self.assertEqual('ackfinish', self.client.recive()[0])
-
-    def tearDown(self):
-        self.client.close()
+        self.client.send('ping')
+        self.assertNotEqual('pong', self.client.recive()[0])
