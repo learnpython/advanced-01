@@ -22,7 +22,6 @@ class Server():
         self._initialize_socket(host, port)
 
     def run_server(self):
-        self.sock.listen(5)
         while not self.do_stop:
             try:
                 conn, addr = self.sock.accept()
@@ -32,6 +31,9 @@ class Server():
                 pass
             except socket.timeout:
                 pass
+            except OSError as msg:
+                logging.error("OSError: %s", msg)
+                self.stop_server()
         self.stop_server()
 
     def stop_server(self):
@@ -46,10 +48,15 @@ class Server():
         signal.signal(signal.SIGINT, self.orig_signal_handler)
 
     def _initialize_socket(self, host, port):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.settimeout(1.0)
-        self.sock.bind((host, port))
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.sock.settimeout(1.0)
+            self.sock.bind((host, port))
+            self.sock.listen(5)
+        except OSError as msg:
+            logging.error("OSError: %s", msg)
+            self.stop_server()
 
     def _handle_client(self, conn, addr):
         thread = threading.Thread(
@@ -67,6 +74,9 @@ class Server():
                 logging.info("Command=%s, data=%s", command, data)
             except socket.timeout:
                 continue
+            except OSError as msg:
+                logging.error("OSError: %s", msg)
+                self.stop_server()
             if command == 'connect':
                 self._send_data_to_socket(conn, 'connected')
             elif command == 'ping':
@@ -95,7 +105,11 @@ class Server():
         logging.info("Thread off conn=%s", conn)
 
     def _send_data_to_socket(self, conn, data):
-        conn.sendall(prepare_data_for_sending(data))
+        try:
+            conn.sendall(prepare_data_for_sending(data))
+        except OSError as msg:
+            logging.error("OSError: %s", msg)
+            self.stop_server()
 
     def _kill_signal_handler(self, signum, frame):
         self.do_stop = True
