@@ -20,8 +20,8 @@ class Server():
         self._initialize_socket(host, port)
 
     def run_server(self):
+        self.sock.listen(5)
         while not self.do_stop:
-            self.sock.listen(5)
             try:
                 conn, addr = self.sock.accept()
                 logging.info("Accepted conn=%s, addr=%s", conn, addr)
