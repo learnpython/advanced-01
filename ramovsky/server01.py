@@ -47,6 +47,7 @@ class Loop(Thread):
             elif cmd == b'quit':
                 self.conn.sendall(b'ackquit')
                 self.running = False
+                break
             elif cmd == b'finish':
                 self.srv.running = False
 
@@ -61,15 +62,21 @@ class Server:
         s.settimeout(1.0)
         self.socket = s
         self.running = True
-        self.clients = []
+        self.clients = {}
         
     def run(self):
         while self.running:
             self.socket.listen(1)
-            conn, addr = self.socket.accept()
-            cli = Loop(self, conn, addr)
-            cli.start()
-            self.clients.append(cli)
+            try:
+                conn, addr = self.socket.accept()
+                cli = Loop(self, conn, addr)
+                cli.start()
+                self.clients[addr] = cli
+            except (socket.error, socket.timeout):
+                pass
+
+        for c in self.clients.values():
+            c.join(.5)
         print('closing socket')
         self.socket.close()
 
@@ -82,5 +89,5 @@ if __name__ == '__main__':
     ap = get_options()
     options = ap.parse_args()
     server = Server(options.host, options.port)
-    server.run()
     signal.signal(signal.SIGINT, server.kill)
+    server.run()

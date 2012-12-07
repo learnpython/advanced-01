@@ -1,4 +1,5 @@
 import time
+import signal
 import unittest
 import subprocess
 import socket
@@ -22,14 +23,11 @@ class Base(unittest.TestCase):
             ]
         self.proc = subprocess.Popen(commandline,
             stdout=stdout, stderr=stderr)
-        self.addCleanup(self.shutdown)
-        time.sleep(.2)
 
-    def shutdown(self):
-        while self.proc.poll() is None:
-            self.proc.terminate()
-            time.sleep(.1)
-        time.sleep(1)
+    def tearDown(self):
+        if self.proc.poll() is None:
+            self.proc.send_signal(signal.SIGINT)
+            self.proc.wait()
 
 
 class Simple(Base):
@@ -58,13 +56,6 @@ class Simple(Base):
         data = s.recv(1024)
         self.assertEqual(b'ackquit', data)
         
-        s.close()
-
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((HOST, PORT))
-        s.sendall(b'finish')
-        data = s.recv(1024)
-        self.assertEqual(b'ackfinish', data)
         s.close()
 
     def test_two(self):
