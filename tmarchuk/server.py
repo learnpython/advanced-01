@@ -41,18 +41,18 @@ class Connection(threading.Thread):
                     else:
                         self.send('No such command')
             except socket.error as e:
-                logger.info("Socket error: %s, %s", e.errno, e.strerror)
+                logger.info("Socket error: {}, {}".format(e.errno, e.strerror))
                 break
             except IOError as e:
                 if e.errno == 32:
                     logger.info("Connection closed by foreign host.")
                 else:
-                    logger.info("IO error: %s, %s", e.errno, e.strerror)
+                    logger.info("IO error: {}, {}".format(e.errno, e.strerror))
                 break
         self.conn.close()
 
     def send(self, data):
-        logger.debug('sending:%s', repr(data))
+        logger.debug("sending: {}".format(repr(data)))
         snd_data = data.encode('utf-8')
         self.conn.sendall(snd_data)
 
@@ -63,7 +63,7 @@ class Connection(threading.Thread):
             self.terminate()
             return False
         data = rcv_data.decode('utf-8')
-        logger.debug('received:%s', repr(data))
+        logger.debug("received: %s".format(repr(data)))
         return data
 
     def parse_data(self, data):
@@ -76,7 +76,7 @@ class Server:
     connections = []
 
     def __init__(self, host='', port=39999):
-        logger.info('Init server at %s:%s', host, port)
+        logger.info("Init server at {}:{}".format(host, port))
         self.host = host
         self.port = int(port)
 
@@ -88,7 +88,7 @@ class Server:
             self.socket.bind((self.host, self.port))
             self.socket.listen(5)
         except socket.error as e:
-            logger.info("Can't bind server, error: %s, %s", e.errno, e.strerror)
+            logger.info("Can't bind server, error: {}, {}".format(e.errno, e.strerror))
             sys.exit(2)
 
     def run(self):
