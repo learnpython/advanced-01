@@ -1,1 +1,1 @@
-from .test_client import ClientTestCase
+from .test_server import ServerTestCase
