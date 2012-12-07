@@ -1,6 +1,7 @@
 import os
 import socket
 import signal
+import logging
 import threading
 from operator import attrgetter
 from collections import namedtuple
@@ -10,7 +11,8 @@ from work.exceptions import ServerFinishException
 from work.utils import (format_reply,
                         get_random_hash,
                         handle_timeout,
-                        get_msg)
+                        get_msg,
+                        configure_logging)
 
 
 def shutdown_handler(signum, frame):
@@ -28,6 +30,7 @@ class CommandServer:
 
     def __init__(self, host, port):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.settimeout(self.TIMEOUT)
         self.socket.bind((host, port))
 
@@ -59,7 +62,7 @@ class CommandServer:
                 msg = get_msg(conn)
             except ValueError:
                 continue
-            except socket.timeout:
+            except (socket.timeout, OSError):
                 conn.close()
                 self.clients.pop(conn, None)
                 return
@@ -113,16 +116,17 @@ class CommandServer:
 
     def shutdown(self):
         self.socket.close()
-        print('socket closed')
-        for conn in self.clients.keys():
+        logging.info('socket closed')
+        for conn in list(self.clients.keys()):
             conn.close()
-        print('connections closed')
-        for th in map(attrgetter('thread'), self.clients.values()):
+        logging.info('connections closed')
+        for th in map(attrgetter('thread'), list(self.clients.values())):
             th.join()
-        print('threads closed')
+        logging.info('threads closed')
         raise SystemExit()
 
 
 if __name__ == '__main__':
+    configure_logging('Server')
     args = get_cmd_args()
     CommandServer.run_server(args.host, args.port)

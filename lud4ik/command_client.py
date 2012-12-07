@@ -1,9 +1,10 @@
 import os
 import signal
 import socket
+import logging
 import threading
 
-from work.utils import format_reply, get_msg
+from work.utils import format_reply, get_msg, configure_logging
 from work.cmdargs import get_cmd_args
 from work.exceptions import ClientFinishException
 
@@ -82,12 +83,13 @@ class CommandClient:
 
     def shutdown(self):
         self.socket.close()
-        print('socket closed')
+        logging.info('socket closed')
         self.thread.join()
-        print('thread closed')
+        logging.info('thread closed')
         raise SystemExit()
 
 
 if __name__ == '__main__':
+    configure_logging('Client')
     args = get_cmd_args()
     CommandClient.run_client(args.host, args.port)

@@ -1,6 +1,7 @@
 import socket
 import random
 import hashlib
+import logging
 from contextlib import contextmanager
 
 
@@ -36,3 +37,11 @@ def get_msg(conn):
     msg_len = int.from_bytes(get_conn_data(conn, MSG_LEN), 'little')
     msg = get_conn_data(conn, msg_len)
     return msg
+
+
+def configure_logging(who):
+    logging.basicConfig(
+        filename = './tmp.log',
+        level=logging.INFO,
+        format= who +' [%(levelname)s] (%(threadName)s) %(message)s',
+    )

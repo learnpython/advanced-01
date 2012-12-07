@@ -1,4 +1,5 @@
 import os
+import time
 import socket
 import signal
 import unittest
@@ -16,12 +17,13 @@ class ServerTestCase(unittest.TestCase):
     def setUp(self):
         self.server = subprocess.Popen(['python3.3', 'command_server.py'])
         self.addCleanup(self.stop_server)
-        self.socket = socket.socket(socket.AF_INET,
-                                    socket.SOCK_STREAM)
+        time.sleep(.5)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.HOST, self.PORT))
 
     def stop_server(self):
-        os.kill(self.server.pid, signal.SIGUSR1)
+        if self.server.poll() is None:
+            os.kill(self.server.pid, signal.SIGUSR1)
 
     def test_connect(self):
         self.socket.sendall(format_reply('connect'))
@@ -49,4 +51,5 @@ class ServerTestCase(unittest.TestCase):
         self.socket.sendall(format_reply('finish'))
         reply = get_msg(self.socket).decode('utf-8')
         self.assertTrue(reply.startswith('ackfinish'))
+        time.sleep(.5)
         self.assertTrue(self.server.poll() is not None)
