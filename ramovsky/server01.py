@@ -11,7 +11,7 @@ def get_options():
         dest='port', default=9000)
     ap.add_argument('--host',
         help='Host for connection',
-        dest='host', default='')
+        dest='host', default='0.0.0.0')
     return ap
 
 
@@ -28,12 +28,16 @@ class Loop(Thread):
         print('Connected by', self.addr)
         while self.running:
             if not self.srv.running:
+                self.conn.sendall(b'ackfinish')
                 self.running = False
-                self.conn.sendall(b'ackfinish')                
                 break
-            packet = self.conn.recv(1024)
-            if not packet: break
-            cmd, *data = packet.split(b'\n')
+            try:
+                packet = self.conn.recv(1024)
+            except socket.timeout:
+                continue
+            if not packet: continue
+            cmd, *data = packet.split(b' ')
+            print('got command', cmd, data)
             if cmd == b'connect':
                 self.conn.sendall(b'connected')
             elif cmd == b'ping':
@@ -50,25 +54,30 @@ class Loop(Thread):
                 break
             elif cmd == b'finish':
                 self.srv.running = False
+            else:
+                self.conn.sendall(b'unknown command')
 
         self.conn.close()
-            
+
 
 class Server:
 
     def __init__(self, host, port):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((host, port))
         s.settimeout(1.0)
         self.socket = s
         self.running = True
         self.clients = {}
-        
+        print('Started server {}:{}'.format(host, port))
+
     def run(self):
         while self.running:
             self.socket.listen(1)
             try:
                 conn, addr = self.socket.accept()
+                conn.settimeout(.1)
                 cli = Loop(self, conn, addr)
                 cli.start()
                 self.clients[addr] = cli
@@ -76,8 +85,7 @@ class Server:
                 pass
 
         for c in self.clients.values():
-            c.join(.5)
-        print('closing socket')
+            c.join()
         self.socket.close()
 
     def kill(self, signum, frame):

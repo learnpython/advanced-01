@@ -6,7 +6,7 @@ import socket
 from sys import stdout, stderr
 
 HOST = 'localhost'
-PORT = 9999
+PORT = 9991
 
 
 class Base(unittest.TestCase):
@@ -19,10 +19,11 @@ class Base(unittest.TestCase):
             'python3',
             '-m',
             'server01',
-            '--port=9999',
+            '--port=9991',
             ]
         self.proc = subprocess.Popen(commandline,
             stdout=stdout, stderr=stderr)
+        time.sleep(.5)
 
     def tearDown(self):
         if self.proc.poll() is None:
@@ -55,7 +56,7 @@ class Simple(Base):
         s.sendall(b'quit')
         data = s.recv(1024)
         self.assertEqual(b'ackquit', data)
-        
+
         s.close()
 
     def test_two(self):
@@ -82,6 +83,6 @@ class Simple(Base):
         s1.close()
         s2.close()
 
-    
+
 if __name__ == '__main__':
     unittest.main()
