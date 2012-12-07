@@ -1,5 +1,6 @@
 import socket
-from work.helpers import make_message
+
+from work.helpers import make_message, parse_message
 
 
 class Client01:
@@ -12,8 +13,8 @@ class Client01:
         self.socket.sendall(make_message(command, message))
 
     def recive(self):
-        buf_size = int(self.socket.recv(4).decode('utf-8').strip())
-        return self.socket.recv(buf_size).decode('utf-8').split('\n', 1)
+        message = parse_message(self.socket.recv)
+        return message
 
     def close(self):
         self.socket.close()
@@ -22,13 +23,17 @@ class Client01:
 if __name__ == '__main__':
     client = Client01()
     client.send('connect', 'HELLO')
-    print '$', client.recive()[1]
+    ans = client.recive()
+
+    print '> '.join([ans[0], ans[1]])
 
     while True:
-        data = raw_input('$ ')
+        data = raw_input('pingd> ')
         client.send('pingd', data)
-        print client.recive()[1]
-        if client.recive()[0] in ['ackquit', 'ackfinish']:
+        ans = client.recive()
+        if ans[0] in ['ackquit', 'ackfinish']:
             break
+
+        print '> '.join([ans[0], ans[1]])
 
     client.close()

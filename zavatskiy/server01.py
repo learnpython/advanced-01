@@ -1,9 +1,7 @@
 import socket
-import logging
 import threading
 
-from work.helpers import make_message
-
+from work.helpers import make_message, parse_message
 
 class Server01:
 
@@ -16,21 +14,22 @@ class Server01:
         self.__shutdown = False
 
     def new_stream(self, conn, addr):
-        """ Make thread for each client connection """
+        """ Make thread for each client """
         t = threading.Thread(target=self.handle_request, args=(conn, addr))
         t.start()
         self.threads.append(t)
 
     def handle_request(self, conn, addr):
         """ Handler request """
-        while True:
-            buf_size = conn.recv(4).decode('utf-8').strip()
-            if not buf_size: break
-
-            buf = conn.recv(int(buf_size)).decode('utf-8')
-            command, data = buf.split('\n', 1)
-
-            if not buf: break
+        while not self.__shutdown:
+            conn.settimeout(5)
+            try:
+                message = parse_message(conn.recv)
+                if not message:
+                    break
+                command, data = message
+            except socket.timeout:
+                break
 
             if command == 'connect':
                 conn.sendall(make_message('connected', 'HELLO'))
@@ -40,16 +39,19 @@ class Server01:
                 conn.sendall(make_message('pongd', data))
             elif command == 'quit':
                 conn.sendall(make_message('ackquit', data))
+                break
             elif command == 'finish':
                 conn.sendall(make_message('ackfinish', data))
                 self.__shutdown = True
+                break
+
+        if self.__shutdown:
+            conn.sendall(make_message('ackfinish'))
 
         conn.close()
 
     def serve(self):
         """ Run server """
-        self.__shutdown = False
-
         while not self.__shutdown:
             conn, addr = self.socket.accept()
             self.new_stream(conn, addr)
@@ -57,12 +59,9 @@ class Server01:
 
     def shutdown(self):
         """ Shutdown server """
-        self.__shutdown = True
-
         for thread in self.threads:
             thread.join()
         self.socket.close()
-
 
 
 if __name__ == '__main__':
