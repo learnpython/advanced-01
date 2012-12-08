@@ -1,4 +1,5 @@
 import os
+import os.path
 import socket
 import signal
 import logging
@@ -23,6 +24,7 @@ class CommandServer:
 
     MAX_CONN = 5
     TIMEOUT = 1.0
+    PID_FILE = 'server.pid'
     clients = {}
     commands = ['connect', 'ping', 'pingd', 'quit', 'finish']
     single_reply_commands = ['ping', 'pingd']
@@ -39,6 +41,8 @@ class CommandServer:
         server = cls(host, port)
         try:
             handler = signal.signal(signal.SIGUSR1, shutdown_handler)
+            with open(cls.PID_FILE, 'w') as f:
+                f.write(str(os.getpid()))
             server.run()
         except (ServerFinishException, OSError):
             server.shutdown()
@@ -123,6 +127,8 @@ class CommandServer:
         for th in map(attrgetter('thread'), list(self.clients.values())):
             th.join()
         logging.info('threads closed')
+        if os.path.exists(self.PID_FILE):
+            os.remove(self.PID_FILE)
         raise SystemExit()
 
 

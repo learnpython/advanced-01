@@ -1,4 +1,5 @@
 import os
+import os.path
 import time
 import socket
 import signal
@@ -13,11 +14,15 @@ class ServerTestCase(unittest.TestCase):
 
     HOST = ''
     PORT = 50007
+    PID_FILE = 'server.pid'
 
     def setUp(self):
         self.server = subprocess.Popen(['python3.3', 'command_server.py'])
         self.addCleanup(self.stop_server)
-        time.sleep(.5)
+        while True:
+            if os.path.exists(self.PID_FILE):
+                time.sleep(0.2)
+                break
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.HOST, self.PORT))
 
@@ -51,5 +56,8 @@ class ServerTestCase(unittest.TestCase):
         self.socket.sendall(format_reply('finish'))
         reply = get_msg(self.socket).decode('utf-8')
         self.assertTrue(reply.startswith('ackfinish'))
-        time.sleep(.5)
+        while True:
+            if not os.path.exists(self.PID_FILE):
+                time.sleep(0.1)
+                break
         self.assertTrue(self.server.poll() is not None)
