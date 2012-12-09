@@ -137,20 +137,12 @@ class Feeder:
         if self._len is None:
             if len(buffer) < 4:
                 return None, buffer
-            _len = Int.deserialize(buffer[:4])
+            self._len = Int.deserialize(buffer[:4])
             buffer = buffer[4:]
-            if len(buffer) <= _len:
-                self._len = _len
-                return None, buffer
-            else:
-                return self.make_packet(buffer, _len)
-        else:
-            if len(buffer) < self._len:
-                return None, buffer
-            else:
-                packet = self.make_packet(buffer, self._len)
-                self._len = None
-                return packet
 
-    def make_packet(self, buffer, _len):
-        return Packet.unpack(buffer[:_len]), buffer[_len:]
+        if len(buffer) < self._len:
+            return None, buffer
+        else:
+            _len = self._len
+            self._len = None
+            return Packet.unpack(buffer[:_len]), buffer[_len:]
