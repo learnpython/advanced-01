@@ -75,7 +75,7 @@ class MetaPacket(type):
         if name == 'Packet':
             return
         cmd = dct.get('cmd')
-        if not dct.get('cmd'):
+        if not cmd:
             raise FieldDeclarationException()
         self.__class__.packets[cmd.id] = self
         self.fields = OrderedDict()
