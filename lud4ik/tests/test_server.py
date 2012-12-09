@@ -28,7 +28,7 @@ class ServerTestCase(unittest.TestCase):
 
     def stop_server(self):
         if self.server.poll() is None:
-            os.kill(self.server.pid, signal.SIGUSR1)
+            os.kill(self.server.pid, signal.SIGINT)
 
     def test_connect(self):
         self.socket.sendall(format_reply('connect'))

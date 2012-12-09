@@ -30,12 +30,12 @@ class CommandClient:
     def run_client(cls, host, port):
         client = cls(host, port)
         try:
-            handler = signal.signal(signal.SIGUSR1, shutdown_handler)
+            handler = signal.signal(signal.SIGINT, shutdown_handler)
             client.run()
         except ClientFinishException:
             client.shutdown()
         finally:
-            signal.signal(signal.SIGUSR1, handler)
+            signal.signal(signal.SIGINT, handler)
 
     def run(self):
         self.thread = threading.Thread(target=self.recv_response)
@@ -78,7 +78,7 @@ class CommandClient:
         return msg
 
     def close(self):
-        os.kill(os.getpid(), signal.SIGUSR1)
+        os.kill(os.getpid(), signal.SIGINT)
         raise SystemExit()
 
     def shutdown(self):

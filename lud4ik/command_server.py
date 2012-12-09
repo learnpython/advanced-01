@@ -40,14 +40,14 @@ class CommandServer:
     def run_server(cls, host, port):
         server = cls(host, port)
         try:
-            handler = signal.signal(signal.SIGUSR1, shutdown_handler)
+            handler = signal.signal(signal.SIGINT, shutdown_handler)
             with open(cls.PID_FILE, 'w') as f:
                 f.write(str(os.getpid()))
             server.run()
         except (ServerFinishException, OSError):
             server.shutdown()
         finally:
-            signal.signal(signal.SIGUSR1, handler)
+            signal.signal(signal.SIGINT, handler)
 
     def run(self):
         self.socket.listen(self.MAX_CONN)
@@ -115,7 +115,7 @@ class CommandServer:
                                                               addr))
         for client in list(self.clients.keys()):
             client.sendall(reply)
-        os.kill(os.getpid(), signal.SIGUSR1)
+        os.kill(os.getpid(), signal.SIGINT)
         raise SystemExit()
 
     def shutdown(self):
