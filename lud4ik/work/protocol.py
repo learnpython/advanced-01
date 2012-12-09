@@ -135,15 +135,17 @@ class PingD(Packet):
 
 class Feeder:
 
+    LENGTH = 4
+
     def __init__(self):
         self._len = None
 
     def feed(self, buffer):
         if self._len is None:
-            if len(buffer) < 4:
+            if len(buffer) < self.LENGTH:
                 return None, buffer
-            self._len = Int.deserialize(buffer[:4])
-            buffer = buffer[4:]
+            self._len = Int.deserialize(buffer[:self.LENGTH])
+            buffer = buffer[self.LENGTH:]
 
         if len(buffer) < self._len:
             return None, buffer
