@@ -74,9 +74,14 @@ class MetaPacket(type):
     def __init__(self, name, bases, dct):
         if name == 'Packet':
             return
-        cmd = dct.get('cmd')
-        if not cmd:
+
+        for value in dct.values():
+            if isinstance(value, Cmd):
+                cmd = value
+                break
+        else:
             raise FieldDeclarationException()
+
         self.__class__.packets[cmd.id] = self
         self.fields = OrderedDict()
         for attr, value in dct.items():
