@@ -136,7 +136,7 @@ class PingD(Packet):
 class Feeder:
 
     def __init__(self):
-        _len = None
+        self._len = None
 
     def feed(self, buffer):
         if self._len is None:
