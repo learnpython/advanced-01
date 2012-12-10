@@ -7,8 +7,10 @@ class ServerFinishException(Exception):
 class ClientFinishException(Exception):
     pass
 
+
 class FieldDeclarationError(Exception):
     pass
+
 
 class ValidationError(Exception):
     pass
