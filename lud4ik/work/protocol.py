@@ -68,8 +68,9 @@ class Feeder:
 
     LENGTH = 4
 
-    def __init__(self):
+    def __init__(self, commands):
         self._len = None
+        self.commands = commands
 
     def feed(self, buffer):
         if self._len is None:
@@ -80,7 +81,14 @@ class Feeder:
 
         if len(buffer) < self._len:
             return None, buffer
-        else:
-            _len = self._len
+
+        try:
+            if buffer[0] not in self.commands:
+                raise ValidationError()
+            packet = Packet.unpack(buffer[:self._len])
+        except ValidationError:
+            packet = None
+        finally:
+            buffer = buffer[self._len:]
             self._len = None
-            return Packet.unpack(buffer[:_len]), buffer[_len:]
+        return packet, buffer
