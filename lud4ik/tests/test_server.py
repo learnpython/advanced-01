@@ -24,7 +24,7 @@ class ServerTestCase(unittest.TestCase):
         self.addCleanup(self.stop_server)
         while True:
             if os.path.exists(self.PID_FILE):
-                time.sleep(0.2)
+                time.sleep(0.5)
                 break
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.HOST, self.PORT))
@@ -38,7 +38,7 @@ class ServerTestCase(unittest.TestCase):
         self.socket.sendall(packet)
         reply = Packet.unpack(get_msg(self.socket))
         self.assertIsInstance(reply, Connected)
-        self.assertTrue(hasattr(reply, session))
+        self.assertTrue(hasattr(reply, 'session'))
 
     def test_ping(self):
         packet = Ping().pack()
@@ -47,8 +47,9 @@ class ServerTestCase(unittest.TestCase):
         self.assertIsInstance(reply, Pong)
 
     def test_pingd(self):
-        packet = PingD(data='test_data').pack()
-        self.socket.sendall(packet)
+        packet = PingD(data='test_data')
+        serialized_packet = packet.pack()
+        self.socket.sendall(serialized_packet)
         reply = Packet.unpack(get_msg(self.socket))
         self.assertIsInstance(reply, PongD)
         self.assertEqual(packet.data, reply.data)
@@ -58,7 +59,7 @@ class ServerTestCase(unittest.TestCase):
         self.socket.sendall(packet)
         reply = Packet.unpack(get_msg(self.socket))
         self.assertIsInstance(reply, AckQuit)
-        self.assertTrue(hasattr(reply, session))
+        self.assertTrue(hasattr(reply, 'session'))
 
     def test_finish(self):
         packet = Finish().pack()
@@ -67,6 +68,6 @@ class ServerTestCase(unittest.TestCase):
         self.assertIsInstance(reply, AckFinish)
         while True:
             if not os.path.exists(self.PID_FILE):
-                time.sleep(0.1)
+                time.sleep(0.5)
                 break
         self.assertTrue(self.server.poll() is not None)
