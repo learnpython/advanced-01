@@ -67,11 +67,11 @@ class CommandServer:
         while True:
             try:
                 chunk = tail + conn.recv(self.CHUNK_SIZE)
-                packet, tail = feeder(chunk)
+                packet, tail = feeder.feed(chunk)
                 if not packet:
                     continue
                 process = getattr(self, packet.__class__.__name__.lower())
-                kwargs = {'packet': packet}
+                kwargs = {}
                 kw_only = get_keyword_args(process)
                 if 'conn' in kw_only:
                     kwargs['conn'] = conn

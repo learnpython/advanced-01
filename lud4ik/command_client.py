@@ -3,8 +3,8 @@ import signal
 import socket
 import logging
 
-from work.protocol import Feeder
-from work.models import cmd
+from work.protocol import Feeder, Packet
+from work.models import cmd, Connect, Ping, PingD, Quit, Finish
 from work.utils import configure_logging
 from work.cmdargs import get_cmd_args
 from work.exceptions import ClientFinishException
@@ -41,17 +41,20 @@ class CommandClient:
     def run(self):
         self.feeder = Feeder(self.commands)
         while True:
-            command = input()
-            command_name = command.split()[0]
-            command = command.replace(' ', '\n')
-            self.socket.sendall(format_reply(command))
+            command = input().split()
+            kwargs = {}
+            cmd_input = getattr(cmd, command[0].upper())
+            if cmd_input == cmd.PINGD:
+                kwargs['data'] = command[1]
+            packet = eval('{}(**kwargs).pack()'.format(command[0]))
+            self.socket.sendall(packet)
             self.recv_response()
 
     def recv_response(self):
         tail = bytes()
         while True:
             chunk = tail + self.socket.recv(self.CHUNK_SIZE)
-            packet, tail = feeder(chunk)
+            packet, tail = self.feeder.feed(chunk)
             if not packet:
                 continue
             else:
