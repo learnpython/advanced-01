@@ -11,12 +11,10 @@ from work.protocol import Feeder
 from work.models import cmd
 from work.cmdargs import get_cmd_args
 from work.exceptions import ServerFinishException
-from work.utils import (format_reply,
-                        get_random_hash,
+from work.utils import (get_random_hash,
                         handle_timeout,
-                        get_msg,
-                        configure_logging,
-                        get_keyword_args)
+                        get_keyword_args,
+                        configure_logging)
 
 
 def shutdown_handler(signum, frame):

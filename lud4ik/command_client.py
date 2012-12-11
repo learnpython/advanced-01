@@ -2,9 +2,10 @@ import os
 import signal
 import socket
 import logging
-import threading
 
-from work.utils import format_reply, get_msg, configure_logging
+from work.protocol import Feeder
+from work.models import cmd
+from work.utils import configure_logging
 from work.cmdargs import get_cmd_args
 from work.exceptions import ClientFinishException
 
@@ -17,8 +18,8 @@ class CommandClient:
 
     session_id = None
     TIMEOUT = 1.0
-    reply_commands = ['connected', 'pong', 'pongd', 'ackquit', 'ackfinish']
-    print_reply_commands = ['pong', 'pongd']
+    CHUNK_SIZE = 1024
+    commands = [cmd.CONNECTED, cmd.PONG, cmd.PONGD, cmd.ACKQUIT, cmd.ACKFINISH]
 
     def __init__(self, host, port):
         self.socket = socket.socket(socket.AF_INET,
@@ -32,60 +33,52 @@ class CommandClient:
         try:
             handler = signal.signal(signal.SIGINT, shutdown_handler)
             client.run()
-        except ClientFinishException:
+        except (OSError, socket.timeout, ClientFinishException):
             client.shutdown()
         finally:
             signal.signal(signal.SIGINT, handler)
 
     def run(self):
-        self.thread = threading.Thread(target=self.recv_response)
-        self.thread.start()
+        self.feeder = Feeder(self.commands)
         while True:
             command = input()
             command_name = command.split()[0]
             command = command.replace(' ', '\n')
             self.socket.sendall(format_reply(command))
+            self.recv_response()
 
     def recv_response(self):
+        tail = bytes()
         while True:
-            msg = self.get_reply()
-            if msg is None:
+            chunk = tail + self.socket.recv(self.CHUNK_SIZE)
+            packet, tail = feeder(chunk)
+            if not packet:
                 continue
-            parts = msg.split('\n')
-            command_name = parts[0]
-            if command_name in self.print_reply_commands:
-                print(msg)
-            elif command_name == 'connected':
-                if parts[-1].startswith('session'):
-                    self.session_id = parts[-1][7:]
-                print(msg)
-            elif command_name == 'ackquit':
-                if parts[-1] == self.session_id:
-                    self.close()
-                else:
-                    print(msg)
-            elif command_name == 'ackfinish':
-                self.close()
+            else:
+                getattr(self, packet.__class__.__name__.lower())(packet)
+                break
 
-    def get_reply(self):
-        try:
-            msg = get_msg(self.socket)
-        except ValueError:
-            return
-        except socket.timeout:
-            return
-        msg = msg.decode('utf-8')
-        return msg
+    def connected(self, packet):
+        self.session = packet.session
+        print('{} {}'.format(packet.cmd, packet.session))
 
-    def close(self):
-        os.kill(os.getpid(), signal.SIGINT)
-        raise SystemExit()
+    def pong(self, packet):
+        print(packet.cmd)
+
+    def pongd(self, packet):
+        print('{} {}'.format(packet.cmd, packet.data))
+
+    def ackquit(self, packet):
+        print('{} {}'.format(packet.cmd, packet.session))
+        self.shutdown()
+
+    def ackfinish(self, packet):
+        print(packet.cmd)
+        self.shutdown()
 
     def shutdown(self):
         self.socket.close()
         logging.info('socket closed')
-        self.thread.join()
-        logging.info('thread closed')
         raise SystemExit()
 
 
