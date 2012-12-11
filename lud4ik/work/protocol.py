@@ -24,10 +24,8 @@ class MetaPacket(type):
             if isinstance(value, Field):
                 value.name = attr
                 self.fields[attr] = value
-        try:
-            if not isinstance(next(iter(self.fields.values())), Cmd):
-                raise FieldDeclarationError('Command shoud be first field.')
-        except StopIteration:
+
+        if not (self.fields and isinstance(next(iter(self.fields.values())), Cmd)):
             raise FieldDeclarationError('Command shoud be first field.')
 
         self.__class__.packets[cmd.id] = self

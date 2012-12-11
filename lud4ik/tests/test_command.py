@@ -62,6 +62,11 @@ class CommandTestCase(unittest.TestCase):
         self.assertIsInstance(Packet.unpack(packet.pack()[self.LENGTH:]),
                               AckFinish)
 
+    def test_without_fields(self):
+        with self.assertRaises(FieldDeclarationError):
+            class ErrorClass(Packet):
+                pass
+
     def test_without_cmd(self):
         with self.assertRaises(FieldDeclarationError):
             class ErrorClass(Packet):
