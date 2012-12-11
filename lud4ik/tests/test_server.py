@@ -6,9 +6,12 @@ import signal
 import unittest
 import subprocess
 
+from work.utils import get_msg
+from work.protocol import Packet
 from command_server import CommandServer
-from command_client import CommandClient
-from work.utils import format_reply, get_msg
+from work.models import (cmd, Connected, Pong, PongD, AckQuit, AckFinish,
+                         Connect, Ping, PingD, Quit, Finish)
+
 
 class ServerTestCase(unittest.TestCase):
 
@@ -31,31 +34,37 @@ class ServerTestCase(unittest.TestCase):
             os.kill(self.server.pid, signal.SIGINT)
 
     def test_connect(self):
-        self.socket.sendall(format_reply('connect'))
-        reply = get_msg(self.socket).decode('utf-8')
-        self.assertTrue(reply.startswith('connected'))
-        self.assertTrue(reply.split('\n')[-1].startswith('session'))
+        packet = Connect().pack()
+        self.socket.sendall(packet)
+        reply = Packet.unpack(get_msg(self.socket))
+        self.assertIsInstance(reply, Connected)
+        self.assertTrue(hasattr(reply, session))
 
     def test_ping(self):
-        self.socket.sendall(format_reply('ping'))
-        reply = get_msg(self.socket).decode('utf-8')
-        self.assertTrue(reply == 'pong')
+        packet = Ping().pack()
+        self.socket.sendall(packet)
+        reply = Packet.unpack(get_msg(self.socket))
+        self.assertIsInstance(reply, Pong)
 
     def test_pingd(self):
-        self.socket.sendall(format_reply('pingd\ntest'))
-        reply = get_msg(self.socket).decode('utf-8').split('\n')
-        self.assertEqual(reply[0], 'pongd')
-        self.assertEqual(reply[1], 'test')
+        packet = PingD(data='test_data').pack()
+        self.socket.sendall(packet)
+        reply = Packet.unpack(get_msg(self.socket))
+        self.assertIsInstance(reply, PongD)
+        self.assertEqual(packet.data, reply.data)
 
     def test_quit(self):
-        self.socket.sendall(format_reply('quit'))
-        reply = get_msg(self.socket).decode('utf-8')
-        self.assertTrue(reply.startswith('ackquit'))
+        packet = Quit().pack()
+        self.socket.sendall(packet)
+        reply = Packet.unpack(get_msg(self.socket))
+        self.assertIsInstance(reply, AckQuit)
+        self.assertTrue(hasattr(reply, session))
 
     def test_finish(self):
-        self.socket.sendall(format_reply('finish'))
-        reply = get_msg(self.socket).decode('utf-8')
-        self.assertTrue(reply.startswith('ackfinish'))
+        packet = Finish().pack()
+        self.socket.sendall(packet)
+        reply = Packet.unpack(get_msg(self.socket))
+        self.assertIsInstance(reply, AckFinish)
         while True:
             if not os.path.exists(self.PID_FILE):
                 time.sleep(0.1)
