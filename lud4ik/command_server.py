@@ -7,13 +7,16 @@ import threading
 from operator import attrgetter
 from collections import namedtuple
 
+from work.protocol import Feeder
+from work.models import cmd
 from work.cmdargs import get_cmd_args
 from work.exceptions import ServerFinishException
 from work.utils import (format_reply,
                         get_random_hash,
                         handle_timeout,
                         get_msg,
-                        configure_logging)
+                        configure_logging,
+                        get_keyword_args)
 
 
 def shutdown_handler(signum, frame):
@@ -24,10 +27,10 @@ class CommandServer:
 
     MAX_CONN = 5
     TIMEOUT = 1.0
+    CHUNK_SIZE = 1024
     PID_FILE = 'server.pid'
     clients = {}
-    commands = ['connect', 'ping', 'pingd', 'quit', 'finish']
-    single_reply_commands = ['ping', 'pingd']
+    commands = [cmd.CONNECT, cmd.PING, cmd.PINGD, cmd.QUIT, cmd.FINISH]
     templ = namedtuple('templ', 'addr, thread, session')
 
     def __init__(self, host, port):
@@ -61,58 +64,50 @@ class CommandServer:
                 th.start()
 
     def run_client(self, conn):
+        feeder = Feeder(self.commands)
+        tail = bytes()
         while True:
             try:
-                msg = get_msg(conn)
-            except ValueError:
-                continue
+                chunk = tail + conn.recv(self.CHUNK_SIZE)
+                packet, tail = feeder(chunk)
+                if not packet:
+                    continue
+                process = getattr(self, packet.__class__.__name__.lower())
+                kwargs = {'packet': packet}
+                kw_only = get_keyword_args(process)
+                if 'conn' in kw_only:
+                    kwargs['conn'] = conn
+                if 'session' in kw_only:
+                    kwargs['session'] = self.clients[conn].session
+                process(packet, **kwargs)
             except (socket.timeout, OSError):
                 conn.close()
                 self.clients.pop(conn, None)
                 return
 
-            msg = msg.decode('utf-8').split('\n')
-            command_name = msg[0]
-            command = getattr(self, command_name)
-            args = [conn]
-            if len(msg) > 1:
-                args.append(msg[1])
-            command(*args)
+    def connect(self, packet, *, session):
+        reply = packet.reply(session)
+        for client in list(self.clients.keys()):
+            conn.sendall(reply)
 
-    def connect(self, conn):
-        self.condition_reply(conn, "connected", reply_templ="{}\nsession{}")
-
-    def ping(self, conn):
-        reply = format_reply('pong')
+    def ping(self, packet, *, conn):
+        reply = packet.reply()
         conn.sendall(reply)
 
-    def pingd(self, conn, data):
-        reply = format_reply('{}\n{}'.format('pongd', data))
+    def pingd(self, packet, *, conn):
+        reply = packet.reply()
         conn.sendall(reply)
 
-    def quit(self, conn):
-        self.condition_reply(conn, "ackquit",
-                             shared_templ="{}\n{} disconnected.")
+    def quit(self, packet, *, conn, session):
+        reply = packet.reply(session)
+        for client in list(self.clients.keys()):
+            conn.sendall(reply)
         conn.close()
         self.clients.pop(conn, None)
         raise SystemExit()
 
-    def condition_reply(self, conn, reply_command, shared_templ="{}\n{}",
-                        reply_templ="{}\n{}"):
-        addr = self.clients[conn].addr
-        shared_reply = format_reply(shared_templ.format(reply_command, addr))
-        session_id = self.clients[conn].session
-        reply = format_reply(reply_templ.format(reply_command, session_id))
-        for client in list(self.clients.keys()):
-            if client == conn:
-                conn.sendall(reply)
-            else:
-                conn.sendall(shared_reply)
-
-    def finish(self, conn):
-        addr = self.clients[conn].addr
-        reply = format_reply("{}\n{} finished server.".format('ackfinish',
-                                                              addr))
+    def finish(self, packet):
+        reply = packet.reply()
         for client in list(self.clients.keys()):
             client.sendall(reply)
         os.kill(os.getpid(), signal.SIGINT)

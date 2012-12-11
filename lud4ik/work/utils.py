@@ -2,6 +2,7 @@ import socket
 import random
 import hashlib
 import logging
+from inspect import signature
 from contextlib import contextmanager
 
 
@@ -37,6 +38,15 @@ def get_msg(conn):
     msg_len = int.from_bytes(get_conn_data(conn, MSG_LEN), 'little')
     msg = get_conn_data(conn, msg_len)
     return msg
+
+
+def get_keyword_args(function):
+    kwargs = []
+    params = signature(function).parameters.values()
+    for i in params:
+        if i.kind == i.KEYWORD_ONLY:
+            kwargs.append(i.name)
+    return kwargs
 
 
 def configure_logging(who):
