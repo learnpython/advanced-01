@@ -77,15 +77,14 @@ class CommandServer:
                 kw_only = get_keyword_args(process)
                 if 'conn' in kw_only:
                     kwargs['conn'] = conn
-                if 'session' in kw_only:
-                    kwargs['session'] = self.clients[conn].session
                 process(packet, **kwargs)
             except (socket.timeout, OSError):
                 conn.close()
                 self.clients.pop(conn, None)
                 return
 
-    def connect(self, packet, *, session):
+    def connect(self, packet, *, conn):
+        session = self.clients[conn].session
         reply = packet.reply(session)
         for client in list(self.clients.keys()):
             conn.sendall(reply)
@@ -98,7 +97,8 @@ class CommandServer:
         reply = packet.reply()
         conn.sendall(reply)
 
-    def quit(self, packet, *, conn, session):
+    def quit(self, packet, *, conn):
+        session = self.clients[conn].session
         reply = packet.reply(session)
         for client in list(self.clients.keys()):
             conn.sendall(reply)
