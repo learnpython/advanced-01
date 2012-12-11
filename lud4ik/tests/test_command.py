@@ -3,6 +3,8 @@ import unittest
 from work.protocol import Packet
 from work.models import (cmd, Connected, Pong, PongD, AckQuit, AckFinish,
                          Connect, Ping, PingD, Quit, Finish)
+from work.fields import Cmd, Str
+from work.exceptions import FieldDeclarationError
 
 
 class CommandTestCase(unittest.TestCase):
@@ -59,3 +61,14 @@ class CommandTestCase(unittest.TestCase):
         packet = AckFinish()
         self.assertIsInstance(Packet.unpack(packet.pack()[self.LENGTH:]),
                               AckFinish)
+
+    def test_without_cmd(self):
+        with self.assertRaises(FieldDeclarationError):
+            class ErrorClass(Packet):
+                data = Str(maxsize=256)
+
+    def test_dublicate(self):
+        with self.assertRaises(FieldDeclarationError):
+            class ErrorClass(Packet):
+                cmd = Cmd(cmd.CONNECTED)
+                data = Str(maxsize=256)

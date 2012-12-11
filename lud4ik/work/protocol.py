@@ -15,19 +15,22 @@ class MetaPacket(type):
         if name == 'Packet':
             return
 
-        for value in dct.values():
-            if isinstance(value, Cmd):
-                cmd = value
-                break
-        else:
-            raise FieldDeclarationError()
-
-        self.__class__.packets[cmd.id] = self
         self.fields = OrderedDict()
         for attr, value in dct.items():
+            if isinstance(value, Cmd):
+                cmd = value
+                if cmd.id in self.__class__.packets:
+                    raise FieldDeclarationError('Dublicate registered command.')
             if isinstance(value, Field):
                 value.name = attr
                 self.fields[attr] = value
+        try:
+            if not isinstance(next(iter(self.fields.values())), Cmd):
+                raise FieldDeclarationError('Command shoud be first field.')
+        except StopIteration:
+            raise FieldDeclarationError('Command shoud be first field.')
+
+        self.__class__.packets[cmd.id] = self
 
 
 class Packet(metaclass=MetaPacket):
