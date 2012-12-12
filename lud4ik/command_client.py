@@ -4,7 +4,7 @@ import socket
 import logging
 
 from work.protocol import Feeder, Packet
-from work.models import cmd, Connect, Ping, PingD, Quit, Finish
+from work.models import cmd
 from work.utils import configure_logging
 from work.cmdargs import get_cmd_args
 from work.exceptions import ClientFinishException
