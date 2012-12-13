@@ -1,13 +1,2 @@
-import unittest
-
-
-class BaseTestCase(unittest.TestCase):
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    def test_connect(self):
-        self.assertRaises(FileNotFoundError, open, '/doesnotexist.py')
+from .test_server import ServerTestCase
+from .test_command import CommandTestCase

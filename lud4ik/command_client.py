@@ -1,9 +1,11 @@
 import os
 import signal
 import socket
-import threading
+import logging
 
-from work.utils import format_reply
+from work.protocol import Feeder, Packet
+from work.models import cmd
+from work.utils import configure_logging
 from work.cmdargs import get_cmd_args
 from work.exceptions import ClientFinishException
 
@@ -15,9 +17,9 @@ def shutdown_handler(signum, frame):
 class CommandClient:
 
     session_id = None
-    TIMEOUT = 10.0
-    reply_commands = ['connected', 'pong', 'pongd', 'ackquit', 'ackfinish']
-    print_reply_commands = ['pong', 'pongd']
+    TIMEOUT = 1.0
+    CHUNK_SIZE = 1024
+    commands = [cmd.CONNECTED, cmd.PONG, cmd.PONGD, cmd.ACKQUIT, cmd.ACKFINISH]
 
     def __init__(self, host, port):
         self.socket = socket.socket(socket.AF_INET,
@@ -29,64 +31,61 @@ class CommandClient:
     def run_client(cls, host, port):
         client = cls(host, port)
         try:
+            handler = signal.signal(signal.SIGINT, shutdown_handler)
             client.run()
-            signal.signal(signal.SIGUSR1, shutdown_handler)
-        except ClientFinishException:
+        except (OSError, socket.timeout, ClientFinishException):
             client.shutdown()
         finally:
-            pass
+            signal.signal(signal.SIGINT, handler)
 
     def run(self):
-        self.thread = threading.Thread(target=self.recv_response)
-        self.thread.start()
+        self.feeder = Feeder(self.commands)
         while True:
-            command = input()
-            command_name = command.split()[0]
-            command = command.replace(' ', '\n')
-            self.socket.sendall(format_reply(command))
+            command = input().split()
+            kwargs = {}
+            cmd_input = getattr(cmd, command[0].upper())
+            if cmd_input == cmd.PINGD:
+                kwargs['data'] = command[1]
+            packet = eval('{}(**kwargs).pack()'.format(command[0]))
+            self.socket.sendall(packet)
+            self.recv_response()
 
     def recv_response(self):
+        tail = bytes()
         while True:
-            msg = self.get_reply()
-            parts = msg.split('\n')
-            command_name = parts[0]
-            if command_name in self.print_reply_commands:
-                print(msg)
-            elif command_name == 'connected':
-                if parts[-1].startswith('session'):
-                    self.session_id = parts[-1][7:]
-                print(msg)
-            elif command_name == 'ackquit':
-                if parts[-1] == self.session_id:
-                    self.close()
-                else:
-                    print(msg)
-            elif command_name == 'ackfinish':
-                self.close()
+            chunk = tail + self.socket.recv(self.CHUNK_SIZE)
+            packet, tail = self.feeder.feed(chunk)
+            if not packet:
+                continue
+            else:
+                getattr(self, packet.__class__.__name__.lower())(packet)
+                break
 
-    def get_reply(self):
-        msg = bytes()
-        msg_len = int(self.socket.recv(4))
-        while len(msg) < msg_len:
-            try:
-                chunk = self.socket.recv(msg_len - len(msg))
-            except socket.timeout:
-                self.close()
-            msg += chunk
-        msg = msg.decode('utf-8')
-        return msg
+    def connected(self, packet):
+        self.session = packet.session
+        print('{} {}'.format(packet.cmd, packet.session))
 
-    def close(self):
-        os.kill(os.getpid(), signal.SIGUSR1)
+    def pong(self, packet):
+        print(packet.cmd)
+
+    def pongd(self, packet):
+        print('{} {}'.format(packet.cmd, packet.data))
+
+    def ackquit(self, packet):
+        print('{} {}'.format(packet.cmd, packet.session))
+        self.shutdown()
+
+    def ackfinish(self, packet):
+        print(packet.cmd)
+        self.shutdown()
 
     def shutdown(self):
         self.socket.close()
-        print('socket closed')
-        self.thread.join()
-        print('thread closed')
+        logging.info('socket closed')
         raise SystemExit()
 
 
 if __name__ == '__main__':
+    configure_logging('Client')
     args = get_cmd_args()
     CommandClient.run_client(args.host, args.port)
