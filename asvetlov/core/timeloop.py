@@ -35,13 +35,16 @@ class Timeloop:
     def call_soon_threadsafe(self, cb, *args):
         with self._soon_lock:
             ret = self.call_soon(cb, *args)
-            sent = 0
-            while not sent:
-                try:
-                    sent = self._signalfd.write(b'T')
-                except BlockingIOError:
-                    pass
+            self._signal(b'T')
             return ret
+
+    def _signal(self, char):
+        sent = 0
+        while not sent:
+            try:
+                sent = self._signalfd.write(char)
+            except BlockingIOError:
+                pass
 
     def _process_timers(self):
         delay = 3600
