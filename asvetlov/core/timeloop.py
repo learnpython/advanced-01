@@ -1,3 +1,4 @@
+import collections
 import contextlib
 import heapq
 import os
@@ -14,7 +15,7 @@ class Timeloop:
         self._wakeupfd = os.fdopen(fdin, 'rb')
         self._signalfd = os.fdopen(fdout, 'wb')
         self._soon_lock = threading.RLock()
-        self._soon = []
+        self._soon = collections.deque()
         self._later = []
         self._timer = time.monotonic
 
@@ -50,7 +51,7 @@ class Timeloop:
         delay = 3600
         with self._soon_lock:
             soon = self._soon
-            self._soon = []
+            self._soon = collections.deque()
         q = self._later
         now = self._timer()
         while q:

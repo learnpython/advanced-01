@@ -37,7 +37,12 @@ class Eventloop(Timeloop):
             assert fd is sock
             conn, peer_addr = sock.accept()
             transport = Transport(self, conn, addr)
+            protocol.connection_made(transport)
             self._readers[conn]
+        def reader(fd, event):
+            pass
+        def writer(fd, event):
+            pass
         self._connectors[sock] = connector
         events = select.EPOLLIN|select.EPOLLERR|select.EPOLLHUP
         self._pool.register(sock, events)

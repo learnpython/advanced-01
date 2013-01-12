@@ -7,16 +7,21 @@ class Transport:
         self.fd = fd
         self.peer_addr = addr
         self.buffer = bytearray()
+        self.closing = False
 
     def write(self, data):
+        if self.closing or not self.fd:
+            raise RuntimeError("Closed")
         self.buffer.extend(data)
 
     def writelines(self, iterable):
+        if self.closing or not self.fd:
+            raise RuntimeError("Closed")
         for l in iterable:
             self.write(l)
 
     def close(self):
-        pass
+        self.closing = True
 
     def abort(self):
         pass

@@ -1,3 +1,4 @@
+import collections
 import heapq
 import unittest
 
@@ -16,7 +17,7 @@ class TestTimeLoop(unittest.TestCase):
     def test_ctor(self):
         tl = self.create_timeloop()
         self.assertTrue(tl._check_args)
-        self.assertEqual([], tl._soon)
+        self.assertEqual(collections.deque(), tl._soon)
         self.assertEqual(0, len(tl._later))
 
     def test_call_soon(self):
@@ -27,10 +28,10 @@ class TestTimeLoop(unittest.TestCase):
         self.assertEqual(0, dc.when)
         self.assertEqual(cb, dc.callback)
         self.assertEqual(('a', 2), dc.args)
-        self.assertEqual([dc], tl._soon)
+        self.assertEqual(collections.deque([dc]), tl._soon)
         self.assertEqual(0, len(tl._later))
         dc2 = tl.call_soon(cb, 'b', 3)
-        self.assertEqual([dc, dc2], tl._soon)
+        self.assertEqual(collections.deque([dc, dc2]), tl._soon)
 
     def test_call_later_zero_delay(self):
         tl = self.create_timeloop()
@@ -40,7 +41,7 @@ class TestTimeLoop(unittest.TestCase):
         self.assertEqual(0, dc.when)
         self.assertEqual(cb, dc.callback)
         self.assertEqual(('a',), dc.args)
-        self.assertEqual([dc], tl._soon)
+        self.assertEqual(collections.deque([dc]), tl._soon)
         self.assertEqual(0, len(tl._later))
 
     def test_call_later(self):
@@ -52,7 +53,7 @@ class TestTimeLoop(unittest.TestCase):
         self.assertEqual(124, dc.when)
         self.assertEqual(cb, dc.callback)
         self.assertEqual(('a',), dc.args)
-        self.assertEqual([], tl._soon)
+        self.assertEqual(collections.deque(), tl._soon)
         self.assertEqual(1, len(tl._later))
         self.assertEqual(dc, tl._later[0])
         dc2 = tl.call_later(0.5, cb, 'b')
@@ -73,7 +74,7 @@ class TestTimeLoop(unittest.TestCase):
         self.assertEqual(0, dc.when)
         self.assertEqual(cb, dc.callback)
         self.assertEqual((), dc.args)
-        self.assertEqual([dc], tl._soon)
+        self.assertEqual(collections.deque([dc]), tl._soon)
         self.assertEqual([], tl._later)
         tl._signalfd.write.assert_called_with(b'T')
 
@@ -88,7 +89,7 @@ class TestTimeLoop(unittest.TestCase):
         self.assertEqual(5, tl._process_timers())
         dc1.callback.assert_called_with(tl)
         dc2.callback.assert_called_with(tl)
-        self.assertEqual([], tl._soon)
+        self.assertEqual(collections.deque([]), tl._soon)
         dc3.callback.assert_called_with(tl)
         self.assertEqual([dc4], tl._later)
 
