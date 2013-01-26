@@ -153,7 +153,6 @@ class MetaMsg(type):
                                       annotation=f)
             params.append(param)
         cls.SIG = sig.replace(parameters=params)
-        cls.__init__.__signature__ = cls.SIG
 
 
 class BaseMsg(metaclass=MetaMsg, root=True):
